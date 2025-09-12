@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HerbalChain - Herbs Traceability System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <style>
+        /* ===================================================================
+           CSS STYLES
+           =================================================================== */
+
+        /* CSS Variables for a clean, colorful, and maintainable palette */
+        :root {
+            --primary-color: #444241;    /* A rich, deep green */
+            --secondary-color: #3af800;  /* A warm amber */
+            --accent-color: #6A7B8E;     /* A calm, muted gray */
+            --text-dark: #2C3639;        /* Dark charcoal */
+            --text-light: #fff;          /* White */
+            --background-start: #f3cda1; /* Pale green start for gradient */
+            --background-end: #88faa2;   /* Light green end for gradient */
+            --card-bg: #f1f3ea;             /* Card background */
+            --shadow-color: rgba(0, 0, 0, 0.15);
+            --border-color: #C8E6C9;     /* Very light green */
+            --success-light: #DCF8E1;
+            --success-dark: #2E7D32;
+            --error-light: #FAD0D3;
+            --error-dark: #f33630;
+            --warning-light: #FFF9C4;
+            --warning-dark: #FF8F00;
+        }
+
+        /* General Body and Main Container Styles */
+        body {
+            font-family: 'Lato', sans-serif;
+            background: linear-gradient(135deg, var(--background-start), var(--background-end));
+            color: var(--text-dark);
+            line-height: 1.6;
+            margin: 0;
+            padding: 2rem;
+            animation: fadeIn 1.5s ease-in-out;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: var(--card-bg);
+            padding: 3rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px var(--shadow-color);
+            transition: transform 0.3s ease-in-out;
+            border: 1px solid var(--border-color);
+        }
+        
+        /* Top image styling */
+        .header-image-top {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .header-image-top img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 1rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        /* Second image styling */
+        .header-image-bottom {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header-image-bottom img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 1rem;
+            box-shadow: 0 10px 20px rgba(255, 76, 76, 0.1);
+        }
+
+        /* Typography */
+        h1, h2, h3 {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            letter-spacing: -1px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            color: var(--primary-color);
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            border-left: 6px solid var(--secondary-color);
+            padding-left: 1.25rem;
+            color: var(--primary-color);
+        }
+
+        .description {
+            text-align: center;
+            color: var(--accent-color);
+            margin-bottom: 3rem;
+            font-style: italic;
+            font-size: 1.1rem;
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .tab-button {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            background: var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
+
+        .tab-button:hover {
+            transform: translateY(-5px);
+            background: var(--secondary-color);
+            color: var(--text-dark);
+            box-shadow: 0 8px 12px var(--shadow-color);
+        }
+
+        .tab-button.active {
+            background: linear-gradient(45deg, var(--primary-color), #4CAF50);
+            color: var(--text-light);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(56, 125, 67, 0.4);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
+            animation: slideIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideIn {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Form Elements */
+        .form-section {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.85rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: var(--background-start);
+            color: var(--text-dark);
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 4px rgba(248, 180, 0, 0.2);
+        }
+
+        .btn {
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            border: none;
+            color: var(--text-light);
+            background: var(--primary-color);
+            transition: background 0.3s ease, transform 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background: #2E7D32;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 10px rgba(0,0,0,0.3);
+        }
+
+        .status-message {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            text-align: center;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .status-message.success {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+
+        .status-message.error {
+            background: var(--error-light);
+            color: var(--error-dark);
+        }
+
+        .status-message.warning {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+        }
+
+        /* QR Code & Trace Results */
+        .qr-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 2rem;
+            gap: 1rem;
+            text-align: center;
+        }
+
+        #qrcode {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 5px 15px var(--shadow-color);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+        #qrcode > div {
+            padding: 5px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background: #F1F8E9;
+        }
+        #generated-qr-count {
+            font-style: italic;
+            color: var(--accent-color);
+            font-size: 1.1rem;
+        }
+
+        #trace-result {
+            margin-top: 2rem;
+            padding: 2rem;
+            background: var(--card-bg);
+            border-radius: 1.5rem;
+            box-shadow: 0 5px 15px var(--shadow-color);
+            transition: all 0.5s ease-in-out;
+        }
+        
+        #trace-result.hidden {
+            display: none;
+        }
+
+        .trace-content .history-item {
+            border-left: 4px solid var(--secondary-color);
+            padding-left: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .history-item p {
+            margin: 0.5rem 0;
+        }
+        .history-item ul {
+            padding-left: 1.5rem;
+        }
+
+        /* Blockchain Ledger */
+        .ledger-section {
+            margin-top: 3rem;
+            text-align: center;
+        }
+
+        .ledger-table-container {
+            overflow-x: auto;
+            background: var(--card-bg);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border-color);
+        }
+
+        .ledger-table {
+            width: 100%;
+            border-collapse: collapse;
+            white-space: nowrap;
+        }
+
+        .ledger-table th, .ledger-table td {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .ledger-table th {
+            font-weight: 700;
+            color: var(--primary-color);
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        .ledger-table td {
+            font-size: 0.95rem;
+            word-break: break-all;
+            color: var(--text-dark);
+        }
+        .ledger-table td pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 0.85rem;
+        }
+
+        .ledger-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .form-group-flex {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem;
+            }
+            .tab-button {
+                padding: 0.75rem 1.2rem;
+            }
+            h1 { font-size: 2rem; }
+            h2 { font-size: 1.5rem; }
+            .form-group-flex {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .form-group-flex .btn {
+                margin-top: 1rem;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div class="container">
+        <div class="header-image-top">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRAkPgz6hbe5TiPLYOkLs0o8sP6sxEbYP7CQQ&s" alt="HerbalChain Logo">
+        </div>
+        <div class="header-image-bottom">
+            <img src="data:image/png;base64,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" alt="Herbal products banner">
+        </div>
+        <h1 class="title">HerbalChain Traceability</h1>
+        <p class="description">Track the journey of herbs from farm to medicine cabinet.</p>
+
+        <div class="tab-nav">
+            <button class="tab-button active" data-tab="collector">Herb Collector</button>
+            <button class="tab-button" data-tab="supplier">Supplier</button>
+            <button class="tab-button" data-tab="manufacturer">Manufacturer</button>
+            <button class="tab-button" data-tab="consumer">Consumer</button>
+        </div>
+
+        <div id="collector" class="tab-content active">
+            <h2>Herb Collection</h2>
+            <div class="form-section">
+                <div>
+                    <label for="herb-name">Herb Name:</label>
+                    <input type="text" id="herb-name" placeholder="Example: Ashwagandha" required>
+                </div>
+                <div>
+                    <label for="herb-location">Collection Location:</label>
+                    <div class="form-group-flex">
+                        <input type="text" id="herb-location" placeholder="Example: Rajasthan, Jodhpur" required>
+                        <button id="capture-location-btn" class="btn" style="white-space: nowrap; font-size: 0.9rem;">Auto-Capture</button>
+                    </div>
+                </div>
+                <div>
+                    <label for="herb-quantity">Units:</label>
+                    <input type="number" id="herb-quantity" placeholder="100" required>
+                </div>
+                <div>
+                    <label for="herb-image">Image for AI Quality Check (URL):</label>
+                    <input type="text" id="herb-image" placeholder="Example: https://example.com/herb.jpg">
+                    <button id="check-collector-quality-btn" class="btn" style="margin-top: 0.5rem; width: 100%; font-size: 0.9rem;">Run AI Quality Check</button>
+                </div>
+                <div id="collector-quality-result" class="status-message"></div>
+                <button id="add-herb-btn" class="btn">Record on Blockchain</button>
+            </div>
+            <div id="collector-status" class="status-message"></div>
+        </div>
+
+        <div id="supplier" class="tab-content">
+            <h2>Transfer Herb</h2>
+            <div class="form-section">
+                <div>
+                    <label for="transfer-herb-id">Herb ID:</label>
+                    <input type="text" id="transfer-herb-id" placeholder="Example: HERB-1698205632313" required>
+                </div>
+                <div>
+                    <label for="transfer-to">Transfer To (ID):</label>
+                    <select id="transfer-to" required>
+                        <option value="">Select Manufacturer</option>
+                        <option value="MANU-001">Manufacturer ABC</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="supplier-weight">Units:</label>
+                    <input type="number" id="supplier-weight" placeholder="98" required>
+                </div>
+                <div>
+                    <label for="supplier-image">Image for AI Quality Check (URL):</label>
+                    <input type="text" id="supplier-image" placeholder="Example: https://example.com/supplier-herb.jpg">
+                    <button id="check-supplier-quality-btn" class="btn" style="margin-top: 0.5rem; width: 100%; font-size: 0.9rem;">Run AI Quality Check</button>
+                </div>
+                <div id="supplier-quality-result" class="status-message"></div>
+                <button id="transfer-herb-btn" class="btn">Transfer</button>
+            </div>
+            <div id="supplier-status" class="status-message"></div>
+        </div>
+
+        <div id="manufacturer" class="tab-content">
+            <h2>Produce Medicine & Generate QR Code</h2>
+            <div class="form-section">
+                <div>
+                    <label for="batch-id">Batch ID:</label>
+                    <input type="text" id="batch-id" placeholder="Example: MED-BATCH-001" required>
+                </div>
+                <div>
+                    <label for="used-herb-ids">Used Herb IDs (comma-separated):</label>
+                    <input type="text" id="used-herb-ids" placeholder="Example: HERB-1698205632313, HERB-1698205632314" required>
+                </div>
+                <div>
+                    <label for="manufacturer-weight">Final Weight (Kg):</label>
+                    <input type="number" id="manufacturer-weight" placeholder="98.5" required>
+                </div>
+                <div>
+                    <label for="manufacturer-image">Final Herb Image (URL):</label>
+                    <input type="text" id="manufacturer-image" placeholder="Example: https://example.com/manufacturer-herb.jpg">
+                    <button id="check-manufacturer-quality-btn" class="btn" style="margin-top: 0.5rem; width: 100%; font-size: 0.9rem;">Run AI Quality Check</button>
+                </div>
+                <div id="manufacturer-quality-result" class="status-message"></div>
+                <button id="produce-medicine-btn" class="btn">Produce Medicine & Generate QR Code</button>
+            </div>
+            <div id="qr-code-area" class="qr-area">
+                <h3 class="title" id="qr-title" style="display:none;">Generated QR Code</h3>
+                <div id="qrcode"></div>
+                <div id="generated-qr-count"></div>
+            </div>
+            <div id="manufacturer-status" class="status-message"></div>
+        </div>
+
+        <div id="consumer" class="tab-content">
+            <h2>Scan QR Code</h2>
+            <div class="form-section">
+                <div id="reader" style="width: 100%; max-width: 400px; margin: auto;"></div>
+                <div style="text-align: center; margin-top: 1rem;">
+                    <button id="start-scan-btn" class="btn">Start Scanner</button>
+                    <button id="stop-scan-btn" class="btn" style="display: none;">Stop Scanner</button>
+                </div>
+                <p style="text-align: center; margin: 1rem 0;">OR</p>
+                <div>
+                    <label for="qr-input">Enter QR Code Data:</label>
+                    <input type="text" id="qr-input" placeholder="Text from QR Code">
+                </div>
+                <button id="scan-qr-btn" class="btn">Trace</button>
+            </div>
+            <div id="trace-result" class="hidden">
+                <h3 class="title">Trace Result</h3>
+                <div id="trace-content"></div>
+            </div>
+        </div>
+
+        <div class="ledger-section">
+            <h2 style="text-align: center;">Blockchain Ledger</h2>
+            <div id="blockchain-ledger" class="ledger-table-container">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th>Block ID</th>
+                            <th>Previous Hash</th>
+                            <th>Current Hash</th>
+                            <th>Data</th>
+                            <th>Weight Match</th>
+                            <th>Quality Match</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledger-body">
+                        <tr><td colspan="6" style="text-align: center; color: var(--accent-color);">No transactions yet.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ===================================================================
+           JAVASCRIPT LOGIC
+           =================================================================== */
+
+        //---------------------------------------------------------
+        // Simulation of Blockchain and Smart Contracts
+        //---------------------------------------------------------
+        class Block {
+            constructor(timestamp, data, previousHash = '') {
+                this.timestamp = timestamp;
+                this.data = data;
+                this.previousHash = previousHash;
+                this.hash = this.calculateHash();
+            }
+
+            calculateHash() {
+                const str = this.previousHash + this.timestamp + JSON.stringify(this.data);
+                return btoa(unescape(encodeURIComponent(str))).substr(0, 32);
+            }
+        }
+
+        class Blockchain {
+            constructor() {
+                this.chain = [this.createGenesisBlock()];
+                this.pendingTransactions = [];
+                this.metadata = {};
+            }
+
+            createGenesisBlock() {
+                return new Block('2025-01-01', 'Genesis Block', '0');
+            }
+
+            getLatestBlock() {
+                return this.chain[this.chain.length - 1];
+            }
+
+            addBlock(newBlock) {
+                newBlock.previousHash = this.getLatestBlock().hash;
+                newBlock.hash = newBlock.calculateHash();
+                this.chain.push(newBlock);
+            }
+
+            // Smart Contracts
+            registerHerb(collectorID, herbID, name, location, quantity, quality) {
+                if (this.metadata[herbID]) {
+                    return { success: false, message: 'This herb ID already exists.' };
+                }
+                const data = { type: 'registerHerb', collectorID, herbID, name, location, quantity, quality, timestamp: Date.now() };
+                this.addBlock(new Block(data.timestamp, data));
+                this.metadata[herbID] = { status: 'collected', name, location, quantity, quality, history: [data] };
+                return { success: true, message: `Herb ID ${herbID} successfully recorded.` };
+            }
+
+            transferHerb(fromID, toID, herbID, weight, supplierQuality) {
+                const herb = this.metadata[herbID];
+                if (!herb) {
+                    return { success: false, message: 'Herb ID does not exist.' };
+                }
+                if (herb.status !== 'collected' && herb.status !== 'transferred') {
+                    return { success: false, message: 'This herb cannot be transferred.' };
+                }
+                
+                const collectorQuality = herb.quality;
+                if (!collectorQuality || !supplierQuality || collectorQuality.score !== supplierQuality.score) {
+                    return { success: false, message: `QUALITY MISMATCH! Collector score: ${collectorQuality?.score || 'N/A'}, Supplier score: ${supplierQuality?.score || 'N/A'}. Transfer blocked.` };
+                }
+
+                const recordedQuantity = herb.quantity;
+                const transferWeight = parseFloat(weight);
+                const tolerancePercentage = 0.05;
+
+                if (isNaN(transferWeight)) {
+                    return { success: false, message: 'Invalid weight entered.' };
+                }
+
+                const difference = Math.abs(recordedQuantity - transferWeight);
+                if (difference > recordedQuantity * tolerancePercentage) {
+                    return { success: false, message: `FRAUD ALERT! Weight mismatch. Recorded: ${recordedQuantity} Kg, Received: ${transferWeight} Kg. Difference exceeds 5% tolerance.` };
+                }
+
+                const data = { type: 'transferHerb', fromID, toID, herbID, weight, supplierQuality, timestamp: Date.now() };
+                this.addBlock(new Block(data.timestamp, data));
+                herb.status = 'transferred';
+                herb.history.push(data);
+                return { success: true, message: `Herb ID ${herbID} successfully transferred.` };
+            }
+            
+            useHerbInMedicine(batchID, manufacturerID, herbIDs, finalWeight, manufacturerQuality) {
+                const invalidHerbs = [];
+                let totalTransferWeight = 0;
+                
+                for (const id of herbIDs) {
+                    const herb = this.metadata[id];
+                    
+                    if (!herb || herb.status !== 'transferred') {
+                        invalidHerbs.push(id);
+                    } else {
+                        const transferBlock = herb.history.find(h => h.type === 'transferHerb');
+
+                        if (!transferBlock) {
+                            return { success: false, message: `No transfer record found for herb ${id}.` };
+                        }
+
+                        if (transferBlock.supplierQuality.score !== manufacturerQuality.score) {
+                             return { success: false, message: `Quality mismatch for herb ${id}. Transfer blocked.` };
+                        }
+                        
+                        totalTransferWeight += parseFloat(transferBlock.weight);
+                    }
+                }
+                
+                if (invalidHerbs.length > 0) {
+                    return { success: false, message: `The following herbs are invalid or not yet transferred: ${invalidHerbs.join(', ')}` };
+                }
+                
+                const tolerancePercentage = 0.05;
+                const weightDifference = Math.abs(totalTransferWeight - finalWeight);
+
+                if (weightDifference > totalTransferWeight * tolerancePercentage) {
+                     return { success: false, message: `Total weight mismatch. Received: ${finalWeight} kg, expected: ${totalTransferWeight} kg. Production blocked.` };
+                }
+
+                const data = { type: 'useHerb', manufacturerID, batchID, herbIDs, finalWeight, manufacturerQuality, timestamp: Date.now() };
+                this.addBlock(new Block(data.timestamp, data));
+                herbIDs.forEach(id => {
+                    this.metadata[id].status = 'used_in_medicine';
+                    this.metadata[id].history.push(data);
+                });
+                return { success: true, message: `Batch ${batchID} successfully recorded.` };
+            }
+        }
+
+        //---------------------------------------------------------
+        // DOM ELEMENTS AND EVENT LISTENERS
+        //---------------------------------------------------------
+        const herbChain = new Blockchain();
+        const tabs = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const ledgerBody = document.getElementById('ledger-body');
+        const qrcodeDiv = document.getElementById('qrcode');
+        const qrTitle = document.getElementById('qr-title');
+        const generatedQrCount = document.getElementById('generated-qr-count');
+
+        let html5QrcodeScanner;
+        const startScanBtn = document.getElementById('start-scan-btn');
+        const stopScanBtn = document.getElementById('stop-scan-btn');
+        const qrInput = document.getElementById('qr-input');
+        const traceResultDiv = document.getElementById('trace-result');
+        const traceContent = document.getElementById('trace-content');
+
+        let collectorQualityData = null;
+        let supplierQualityData = null;
+        let manufacturerQualityData = null;
+
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash |= 0;
+            }
+            const score = (Math.abs(hash) % 51) + 50;
+            return score;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const initialTab = document.querySelector('.tab-button.active');
+            if (initialTab) {
+                initialTab.classList.add('active');
+                const contentId = initialTab.getAttribute('data-tab');
+                document.getElementById(contentId).classList.add('active');
+            }
+            updateLedger();
+        });
+
+        tabs.forEach(button => {
+            button.addEventListener('click', () => {
+                const tab = button.dataset.tab;
+                tabs.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                tabContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(tab).classList.add('active');
+                
+                if (tab === 'consumer') {
+                    startScanner();
+                } else {
+                    stopScanner();
+                }
+                
+                if (tab === 'collector') {
+                    getGeoLocation();
+                }
+            });
+        });
+
+        function updateLedger() {
+            if (herbChain.chain.length <= 1) {
+                ledgerBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--accent-color);">No transactions yet.</td></tr>';
+                return;
+            }
+            ledgerBody.innerHTML = '';
+            herbChain.chain.slice(1).reverse().forEach((block, index) => {
+                const data = block.data;
+                let weightMatchStatus = 'N/A';
+                let qualityMatchStatus = 'N/A';
+
+                if (data.type === 'transferHerb' && data.herbID) {
+                    const herbMetadata = herbChain.metadata[data.herbID];
+                    
+                    if (herbMetadata.quality && data.supplierQuality) {
+                        if (herbMetadata.quality.score === data.supplierQuality.score) {
+                            qualityMatchStatus = '✅ Matched';
+                        } else {
+                            qualityMatchStatus = `🚨 Mismatch (${herbMetadata.quality.score} vs ${data.supplierQuality.score})`;
+                        }
+                    }
+
+                    if (herbMetadata.quantity) {
+                        const recordedQuantity = herbMetadata.quantity;
+                        const transferWeight = parseFloat(data.weight);
+                        const tolerancePercentage = 0.05;
+                        const difference = Math.abs(recordedQuantity - transferWeight);
+                        if (difference <= recordedQuantity * tolerancePercentage) {
+                            weightMatchStatus = '✅ Matched';
+                        } else {
+                            weightMatchStatus = `🚨 Mismatch (${recordedQuantity} vs ${transferWeight})`;
+                        }
+                    }
+                }
+
+                const row = document.createElement('tr');
+                const dataDisplay = JSON.stringify(block.data, null, 2).replace(/[\{\}]/g, '');
+                row.innerHTML = `
+                    <td>${herbChain.chain.length - 1 - index}</td>
+                    <td>${block.previousHash.substring(0, 10)}...</td>
+                    <td>${block.hash.substring(0, 10)}...</td>
+                    <td><pre>${dataDisplay}</pre></td>
+                    <td>${weightMatchStatus}</td>
+                    <td>${qualityMatchStatus}</td>
+                `;
+                ledgerBody.appendChild(row);
+            });
+        }
+        
+        document.getElementById('check-collector-quality-btn').addEventListener('click', () => {
+            const qualityDiv = document.getElementById('collector-quality-result');
+            const herbImage = document.getElementById('herb-image').value;
+
+            if (!herbImage) {
+                qualityDiv.textContent = 'Please provide an image URL to check quality.';
+                qualityDiv.className = 'status-message error';
+                return;
+            }
+            qualityDiv.textContent = 'Analyzing image for herb quality...';
+            qualityDiv.className = 'status-message';
+            
+            setTimeout(() => {
+                const qualityScore = simpleHash(herbImage);
+                const qualityStatus = qualityScore > 75 ? "Excellent" : "Good";
+                collectorQualityData = { score: qualityScore, status: qualityStatus };
+                qualityDiv.textContent = `AI analysis complete! Quality Score: ${qualityScore}/100. Status: ${qualityStatus}`;
+                qualityDiv.className = `status-message ${qualityScore > 75 ? 'success' : 'warning'}`;
+            }, 2000); 
+        });
+
+        document.getElementById('check-supplier-quality-btn').addEventListener('click', () => {
+            const qualityDiv = document.getElementById('supplier-quality-result');
+            const supplierImage = document.getElementById('supplier-image').value;
+
+            if (!supplierImage) {
+                qualityDiv.textContent = 'Please provide an image URL to check quality.';
+                qualityDiv.className = 'status-message error';
+                return;
+            }
+            qualityDiv.textContent = 'Analyzing image for herb quality...';
+            qualityDiv.className = 'status-message';
+
+            setTimeout(() => {
+                const qualityScore = simpleHash(supplierImage);
+                const qualityStatus = qualityScore > 75 ? "Excellent" : "Good";
+                supplierQualityData = { score: qualityScore, status: qualityStatus };
+                qualityDiv.textContent = `AI analysis complete! Quality Score: ${qualityScore}/100. Status: ${qualityStatus}`;
+                qualityDiv.className = `status-message ${qualityScore > 75 ? 'success' : 'warning'}`;
+            }, 2000); 
+        });
+
+        document.getElementById('check-manufacturer-quality-btn').addEventListener('click', () => {
+            const qualityDiv = document.getElementById('manufacturer-quality-result');
+            const manufacturerImage = document.getElementById('manufacturer-image').value;
+
+            if (!manufacturerImage) {
+                qualityDiv.textContent = 'Please provide an image URL to check quality.';
+                qualityDiv.className = 'status-message error';
+                return;
+            }
+            qualityDiv.textContent = 'Analyzing image for herb quality...';
+            qualityDiv.className = 'status-message';
+
+            setTimeout(() => {
+                const qualityScore = simpleHash(manufacturerImage);
+                const qualityStatus = qualityScore > 75 ? "Excellent" : "Good";
+                manufacturerQualityData = { score: qualityScore, status: qualityStatus };
+                qualityDiv.textContent = `AI analysis complete! Quality Score: ${qualityScore}/100. Status: ${qualityStatus}`;
+                qualityDiv.className = `status-message ${qualityScore > 75 ? 'success' : 'warning'}`;
+            }, 2000);
+        });
+
+        function onScanSuccess(decodedText) {
+            console.log(`Scan result: ${decodedText}`);
+            stopScanner();
+            qrInput.value = decodedText;
+            processQrData(decodedText);
+        }
+
+        function onScanError(errorMessage) {
+            console.warn(`QR scan error: ${errorMessage}`);
+        }
+
+        function startScanner() {
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+                html5QrcodeScanner.render(onScanSuccess, onScanError);
+                startScanBtn.style.display = 'none';
+                stopScanBtn.style.display = 'inline-block';
+            }
+        }
+
+        function stopScanner() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear().then(() => {
+                    console.log("Scanner stopped.");
+                }).catch(error => {
+                    console.error("Failed to stop scanner:", error);
+                });
+                html5QrcodeScanner = null;
+            }
+            startScanBtn.style.display = 'inline-block';
+            stopScanBtn.style.display = 'none';
+        }
+
+        function processQrData(qrInputData) {
+            let qrData;
+            try {
+                qrData = JSON.parse(qrInputData);
+                traceResultDiv.classList.remove('hidden');
+            } catch (e) {
+                traceResultDiv.classList.remove('hidden');
+                traceContent.innerHTML = '<p style="color: var(--error-dark);">Invalid QR Code Data. Please enter a valid JSON string.</p>';
+                return;
+            }
+
+            if (qrData.type === 'medicine' && qrData.batchID) {
+                traceContent.innerHTML = `<h4>Medicine Batch:</h4><p><strong>Batch ID:</strong> ${qrData.batchID}</p>`;
+                if (qrData.unitID) {
+                    traceContent.innerHTML += `<p><strong>Unit ID:</strong> ${qrData.unitID}</p>`;
+                }
+                
+                const useBlock = herbChain.chain.find(block => block.data.batchID === qrData.batchID);
+                const usedHerbs = useBlock ? useBlock.data.herbIDs : [];
+                
+                if (usedHerbs.length > 0) {
+                    traceContent.innerHTML += '<h4>Used Herbs:</h4>';
+                    usedHerbs.forEach(herbID => {
+                        const herb = herbChain.metadata[herbID];
+                        if (herb) {
+                            traceContent.innerHTML += `
+                                <div class="history-item">
+                                    <p><strong>Herb ID:</strong> ${herbID}</p>
+                                    <p><strong>Name:</strong> ${herb.name}</p>
+                                    <p><strong>Collection Location:</strong> ${herb.location}</p>
+                                    <p><strong>Quantity:</strong> ${herb.quantity} Kg</p>
+                                    <p><strong>Quality Check:</strong> ${herb.quality ? `Score: ${herb.quality.score}/100, Status: ${herb.quality.status}` : 'N/A'}</p>
+                                    <p><strong>Blockchain Records:</strong></p>
+                                    <ul style="list-style: disc; margin-left: 1rem;">
+                                        ${herb.history.map(h => `<li>${h.type} by ${h.collectorID || h.fromID || h.manufacturerID}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            `;
+                        }
+                    });
+                } else {
+                    traceContent.innerHTML += '<p>No herb records found for this batch.</p>';
+                }
+            } else {
+                traceResultDiv.classList.remove('hidden');
+                traceContent.innerHTML = '<p style="color: var(--error-dark);">Invalid QR Code Data. No batch ID found.</p>';
+            }
+        }
+
+        function getGeoLocation() {
+            const statusDiv = document.getElementById('collector-status');
+            const locationInput = document.getElementById('herb-location');
+
+            if (navigator.geolocation) {
+                statusDiv.textContent = 'Fetching your location...';
+                statusDiv.className = 'status-message';
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude.toFixed(4);
+                        const lon = position.coords.longitude.toFixed(4);
+                        locationInput.value = `Lat: ${lat}, Lon: ${lon}`;
+                        statusDiv.textContent = 'Location auto-captured successfully.';
+                        statusDiv.className = 'status-message success';
+                    },
+                    (error) => {
+                        statusDiv.textContent = `Geolocation error: ${error.message}. Please enter manually.`;
+                        statusDiv.className = 'status-message error';
+                    },
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
+            } else {
+                statusDiv.textContent = "Geolocation is not supported by your browser. Please enter the location manually.";
+                statusDiv.className = 'status-message error';
+            }
+        }
+
+        document.getElementById('add-herb-btn').addEventListener('click', () => {
+            const name = document.getElementById('herb-name').value;
+            const location = document.getElementById('herb-location').value;
+            const quantity = parseFloat(document.getElementById('herb-quantity').value);
+            const statusDiv = document.getElementById('collector-status');
+
+            if (!name || !location || isNaN(quantity) || quantity <= 0) {
+                statusDiv.textContent = 'Please fill all fields correctly.';
+                statusDiv.className = 'status-message error';
+                return;
+            }
+
+            if (!collectorQualityData) {
+                statusDiv.textContent = 'Please run the AI Quality Check first.';
+                statusDiv.className = 'status-message error';
+                return;
+            }
+
+            const herbID = 'HERB-' + Date.now();
+            const result = herbChain.registerHerb('COLLECTOR-001', herbID, name, location, quantity, collectorQualityData);
+            if (result.success) {
+                statusDiv.textContent = result.message;
+                statusDiv.className = 'status-message success';
+                document.getElementById('herb-name').value = '';
+                document.getElementById('herb-location').value = '';
+                document.getElementById('herb-quantity').value = '';
+                document.getElementById('herb-image').value = '';
+                document.getElementById('collector-quality-result').textContent = '';
+                collectorQualityData = null;
+                updateLedger();
+            } else {
+                statusDiv.textContent = result.message;
+                statusDiv.className = 'status-message error';
+            }
+        });
+
+        document.getElementById('transfer-herb-btn').addEventListener('click', () => {
+            const herbID = document.getElementById('transfer-herb-id').value;
+            const toID = document.getElementById('transfer-to').value;
+            const weight = document.getElementById('supplier-weight').value;
+            const statusDiv = document.getElementById('supplier-status');
+
+            if (!herbID || !toID || !weight) {
+                statusDiv.textContent = 'Please fill all fields.';
+                statusDiv.className = 'status-message error';
+                return;
+            }
+
+            if (!supplierQualityData) {
+                statusDiv.textContent = 'Please run the AI Quality Check first.';
+                statusDiv.className = 'status-message error';
+                return;
+            }
+            
+            const result = herbChain.transferHerb('SUPPLIER-001', toID, herbID, weight, supplierQualityData);
+            if (result.success) {
+                statusDiv.textContent = result.message;
+                statusDiv.className = 'status-message success';
+            } else {
+                statusDiv.textContent = result.message;
+                statusDiv.className = 'status-message error';
+            }
+            updateLedger();
+        });
+
+        document.getElementById('produce-medicine-btn').addEventListener('click', () => {
+            const batchID = document.getElementById('batch-id').value;
+            const usedHerbIDs = document.getElementById('used-herb-ids').value.split(',').map(id => id.trim());
+            const finalWeight = parseFloat(document.getElementById('manufacturer-weight').value);
+            const statusDiv = document.getElementById('manufacturer-status');
+
+            if (!batchID || usedHerbIDs.length === 0 || usedHerbIDs[0] === '' || isNaN(finalWeight)) {
+                statusDiv.textContent = 'Please fill all fields correctly.';
+                statusDiv.className = 'status-message error';
+                return;
+            }
+
+            if (!manufacturerQualityData) {
+                statusDiv.textContent = 'Please run the AI Quality Check first.';
+                statusDiv.className = 'status-message error';
+                return;
+            }
+
+            const result = herbChain.useHerbInMedicine(batchID, 'MANU-001', usedHerbIDs, finalWeight, manufacturerQualityData);
+            
+            if (result.success) {
+                qrcodeDiv.innerHTML = ''; 
+                qrTitle.style.display = 'block';
+                const qrCodeCount = Math.floor(finalWeight);
+                generatedQrCount.textContent = `Generating ${qrCodeCount} QR codes...`;
+
+                for (let i = 1; i <= qrCodeCount; i++) {
+                    const qrData = JSON.stringify({
+                        batchID: batchID,
+                        unitID: `${batchID}-${String(i).padStart(3, '0')}`,
+                        type: 'medicine',
+                        sourceHerbs: usedHerbIDs
+                    });
+                    
+                    const qrContainer = document.createElement('div');
+                    qrContainer.style.margin = '10px';
+                    qrContainer.style.textAlign = 'center';
+
+                    const qrElement = document.createElement('div');
+                    new QRCode(qrElement, {
+                        text: qrData,
+                        width: 100,
+                        height: 100,
+                    });
+                    qrContainer.appendChild(qrElement);
+
+                    const qrLabel = document.createElement('p');
+                    qrLabel.textContent = `Unit ${i}`;
+                    qrLabel.style.fontSize = '0.8em';
+                    qrContainer.appendChild(qrLabel);
+
+                    qrcodeDiv.appendChild(qrContainer);
+                }
+
+                statusDiv.textContent = result.message;
+                statusDiv.className = 'status-message success';
+                generatedQrCount.textContent = `Successfully generated ${qrCodeCount} unique QR codes.`;
+                updateLedger();
+            } else {
+                statusDiv.textContent = result.message;
+                statusDiv.className = 'status-message error';
+                generatedQrCount.textContent = '';
+            }
+        });
+
+        document.getElementById('capture-location-btn').addEventListener('click', getGeoLocation);
+        startScanBtn.addEventListener('click', startScanner);
+        stopScanBtn.addEventListener('click', stopScanner);
+        
+        document.getElementById('scan-qr-btn').addEventListener('click', () => {
+            const qrInput = document.getElementById('qr-input').value;
+            processQrData(qrInput);
+        });
+    </script>
+</body>
+</html>
