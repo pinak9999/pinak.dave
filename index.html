@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         /* ===================================================================
@@ -17,20 +19,20 @@
 
         /* CSS Variables for a clean, colorful, and maintainable palette */
         :root {
-            --primary-color: #444241;    /* A rich, deep green */
-            --secondary-color: #3af800;  /* A warm amber */
+            --primary-color: #387D43;    /* A rich, deep green */
+            --secondary-color: #F8B400;  /* A warm amber */
             --accent-color: #6A7B8E;     /* A calm, muted gray */
             --text-dark: #2C3639;        /* Dark charcoal */
             --text-light: #fff;          /* White */
-            --background-start: #f3cda1; /* Pale green start for gradient */
-            --background-end: #88faa2;   /* Light green end for gradient */
+            --background-start: #f1be4e; /* Pale green start for gradient */
+            --background-end: #a1ffb7;   /* Light green end for gradient */
             --card-bg: #f1f3ea;             /* Card background */
             --shadow-color: rgba(0, 0, 0, 0.15);
             --border-color: #C8E6C9;     /* Very light green */
             --success-light: #DCF8E1;
             --success-dark: #2E7D32;
             --error-light: #FAD0D3;
-            --error-dark: #f33630;
+            --error-dark: #C62828;
             --warning-light: #FFF9C4;
             --warning-dark: #FF8F00;
         }
@@ -81,7 +83,7 @@
             max-width: 100%;
             height: auto;
             border-radius: 1rem;
-            box-shadow: 0 10px 20px rgba(255, 76, 76, 0.1);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
 
         /* Typography */
@@ -328,20 +330,17 @@
             border-collapse: collapse;
             white-space: nowrap;
         }
-
         .ledger-table th, .ledger-table td {
             padding: 1rem 1.2rem;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
         }
-
         .ledger-table th {
             font-weight: 700;
             color: var(--primary-color);
             text-transform: uppercase;
             font-size: 0.9rem;
         }
-
         .ledger-table td {
             font-size: 0.95rem;
             word-break: break-all;
@@ -351,17 +350,66 @@
             white-space: pre-wrap;
             word-wrap: break-word;
             font-size: 0.85rem;
+            font-family: 'Lato', sans-serif;
+            margin: 0;
+            padding: 0;
         }
-
         .ledger-table tr:last-child td {
             border-bottom: none;
         }
         
+        /* New styles for collapsible data */
+        .ledger-data-wrapper {
+            max-height: 25px; /* Adjust as needed */
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .ledger-data-wrapper.expanded {
+            max-height: 500px; /* Large enough to show all content */
+        }
+        .data-summary {
+            cursor: pointer;
+            font-weight: bold;
+            color: var(--primary-color);
+            display: inline-block;
+            transition: color 0.3s ease;
+        }
+        .data-summary:hover {
+            color: var(--secondary-color);
+        }
+        .data-pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 0.85rem;
+            font-family: 'Lato', sans-serif;
+        }
+        .download-btn {
+            margin-top: 2rem;
+            background-color: #007bff;
+            color: white;
+            border-radius: 0.75rem;
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: background 0.3s ease, transform 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .download-btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-3px);
+        }
+
+        /* Utility classes for layout */
         .form-group-flex {
             display: flex;
             gap: 1rem;
             align-items: flex-end;
         }
+
+        /* Responsive adjustments */
         @media (max-width: 768px) {
             .container {
                 padding: 1.5rem;
@@ -388,7 +436,7 @@
             <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRAkPgz6hbe5TiPLYOkLs0o8sP6sxEbYP7CQQ&s" alt="HerbalChain Logo">
         </div>
         <div class="header-image-bottom">
-            <img src="data:image/png;base64,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" alt="Herbal products banner">
+            <img src="https://i.imgur.com/kS94b2r.jpeg" alt="Herbal products banner">
         </div>
         <h1 class="title">HerbalChain Traceability</h1>
         <p class="description">Track the journey of herbs from farm to medicine cabinet.</p>
@@ -529,6 +577,7 @@
                     </tbody>
                 </table>
             </div>
+            <button id="download-pdf-btn" class="download-btn">Download Blockchain Ledger (PDF)</button>
         </div>
     </div>
 
@@ -675,6 +724,7 @@
         const qrcodeDiv = document.getElementById('qrcode');
         const qrTitle = document.getElementById('qr-title');
         const generatedQrCount = document.getElementById('generated-qr-count');
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
 
         let html5QrcodeScanner;
         const startScanBtn = document.getElementById('start-scan-btn');
@@ -762,14 +812,29 @@
                         }
                     }
                 }
-
+                
+                let formattedData = '';
+                for (const key in data) {
+                    if (data.hasOwnProperty(key)) {
+                        let value = data[key];
+                        if (typeof value === 'object' && value !== null) {
+                            value = JSON.stringify(value, null, 2);
+                        }
+                        formattedData += `<strong>${key}:</strong> ${value}<br>`;
+                    }
+                }
+                
                 const row = document.createElement('tr');
-                const dataDisplay = JSON.stringify(block.data, null, 2).replace(/[\{\}]/g, '');
                 row.innerHTML = `
                     <td>${herbChain.chain.length - 1 - index}</td>
                     <td>${block.previousHash.substring(0, 10)}...</td>
                     <td>${block.hash.substring(0, 10)}...</td>
-                    <td><pre>${dataDisplay}</pre></td>
+                    <td>
+                        <details>
+                            <summary class="data-summary">Show Details</summary>
+                            <pre>${formattedData}</pre>
+                        </details>
+                    </td>
                     <td>${weightMatchStatus}</td>
                     <td>${qualityMatchStatus}</td>
                 `;
@@ -1078,6 +1143,89 @@
                 statusDiv.className = 'status-message error';
                 generatedQrCount.textContent = '';
             }
+        });
+
+        // PDF Download Function
+        downloadPdfBtn.addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(20);
+            doc.text("HerbalChain Blockchain Ledger", 10, 15);
+            doc.setFontSize(10);
+            doc.text(`Report Generated: ${new Date().toLocaleString()}`, 10, 22);
+
+            const tableData = [];
+            const headers = ['Block ID', 'Previous Hash', 'Current Hash', 'Data', 'Weight Match', 'Quality Match'];
+
+            herbChain.chain.slice(1).reverse().forEach((block, index) => {
+                const data = block.data;
+                const formattedData = Object.entries(data).map(([key, value]) => {
+                    let formattedValue = value;
+                    if (typeof value === 'object' && value !== null) {
+                        formattedValue = JSON.stringify(value, null, 2).replace(/\"/g, '');
+                    }
+                    return `${key}: ${formattedValue}`;
+                }).join('\n');
+
+                let weightMatchStatus = 'N/A';
+                let qualityMatchStatus = 'N/A';
+
+                if (data.type === 'transferHerb' && data.herbID) {
+                    const herbMetadata = herbChain.metadata[data.herbID];
+                    if (herbMetadata.quality && data.supplierQuality) {
+                        if (herbMetadata.quality.score === data.supplierQuality.score) {
+                            qualityMatchStatus = 'Matched';
+                        } else {
+                            qualityMatchStatus = `Mismatch (${herbMetadata.quality.score} vs ${data.supplierQuality.score})`;
+                        }
+                    }
+                    if (herbMetadata.quantity) {
+                        const recordedQuantity = herbMetadata.quantity;
+                        const transferWeight = parseFloat(data.weight);
+                        const tolerancePercentage = 0.05;
+                        const difference = Math.abs(recordedQuantity - transferWeight);
+                        if (difference <= recordedQuantity * tolerancePercentage) {
+                            weightMatchStatus = 'Matched';
+                        } else {
+                            weightMatchStatus = `Mismatch (${recordedQuantity} vs ${transferWeight})`;
+                        }
+                    }
+                }
+                
+                tableData.push([
+                    herbChain.chain.length - 1 - index,
+                    block.previousHash.substring(0, 10) + '...',
+                    block.hash.substring(0, 10) + '...',
+                    formattedData,
+                    weightMatchStatus,
+                    qualityMatchStatus
+                ]);
+            });
+
+            doc.autoTable({
+                startY: 30,
+                head: [headers],
+                body: tableData,
+                theme: 'striped',
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2,
+                    valign: 'middle',
+                    overflow: 'linebreak',
+                    cellWidth: 'wrap'
+                },
+                columnStyles: {
+                    0: { cellWidth: 15 },
+                    1: { cellWidth: 20 },
+                    2: { cellWidth: 20 },
+                    3: { cellWidth: 85 },
+                    4: { cellWidth: 25 },
+                    5: { cellWidth: 25 }
+                },
+            });
+
+            doc.save('HerbalChain_Ledger.pdf');
         });
 
         document.getElementById('capture-location-btn').addEventListener('click', getGeoLocation);
