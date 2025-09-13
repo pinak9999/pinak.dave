@@ -86,21 +86,23 @@
             align-items: center;
             padding: 0 2rem;
             margin-bottom: 2rem;
+            flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+            gap: 1rem;
         }
         
-        .header-top .logo-img,
-        .header-top .ayush-logo {
+        .header-top .logo-img {
             height: 10rem;
-            width: auto;
-            /* transform removed as it causes alignment issues */
+            width: auto; /* Maintain aspect ratio */
         }
-        
+
         .header-top .ayush-logo {
             height: 8rem;
+            width: auto; /* Maintain aspect ratio */
         }
         
         .header-top .herb-img {
             height: 10rem;
+            width: auto; /* Maintain aspect ratio */
         }
         
         .theme-toggle-btn, .lang-toggle-btn {
@@ -454,38 +456,60 @@
         /* Responsive adjustments */
         @media (max-width: 768px) {
             .container {
-                padding: 1.5rem;
-            }
-            .tab-button {
-                padding: 0.75rem 1.2rem;
+                padding: 1rem;
             }
             h1 { font-size: 2rem; }
             h2 { font-size: 1.5rem; }
+            .description { font-size: 1rem; margin-bottom: 2rem;}
+            .tab-nav { gap: 1rem; }
+            .tab-button {
+                padding: 0.75rem 1rem;
+                font-size: 0.9rem;
+            }
+            .tab-content { padding: 1.5rem; }
+            .form-section { gap: 1rem; }
             .form-group-flex {
                 flex-direction: column;
                 align-items: stretch;
+                gap: 0.5rem;
             }
             .form-group-flex .btn {
-                margin-top: 1rem;
+                margin-top: 0.5rem;
             }
+            /* Adjustments to the header to stack and center elements */
             .header-top {
                 flex-direction: column;
-                align-items: center; /* Center items vertically */
-                gap: 1.5rem;
+                align-items: center; /* Centers all direct children */
+                gap: 1rem;
             }
-            /* Adjust image sizes for smaller screens to prevent overflow */
-            .header-top .logo-img, .header-top .ayush-logo {
-                height: auto;
-                width: 100%;
-                max-width: 10rem;
+            .header-top .logo-img {
+                height: 8rem;
+                max-width: 100%;
             }
             .header-top .ayush-logo {
-                max-width: 8rem;
+                height: 6rem;
+                max-width: 100%;
             }
             .toggle-group {
-                margin-left: 0; /* Align buttons with other elements */
-                justify-content: center;
+                margin-top: 1rem;
             }
+            /* Smaller table text for mobile */
+            .ledger-table th, .ledger-table td {
+                padding: 0.75rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 1rem; }
+            .container { padding: 1rem; }
+            h1 { font-size: 1.8rem; }
+            .tab-button {
+                font-size: 0.8rem;
+                padding: 0.75rem;
+            }
+            .header-top .logo-img { height: 6rem; }
+            .header-top .ayush-logo { height: 4.5rem; }
         }
     </style>
 </head>
