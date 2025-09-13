@@ -88,19 +88,19 @@
             margin-bottom: 2rem;
         }
         
-        .header-top .logo-img {
+        .header-top .logo-img,
+        .header-top .ayush-logo {
             height: 10rem;
-            transform: translateX(1px);
+            width: auto;
+            /* transform removed as it causes alignment issues */
         }
-
+        
         .header-top .ayush-logo {
             height: 8rem;
-            transform: translateX(10px);
         }
         
         .header-top .herb-img {
             height: 10rem;
-            transform: translateX(-1px);
         }
         
         .theme-toggle-btn, .lang-toggle-btn {
@@ -470,10 +470,21 @@
             }
             .header-top {
                 flex-direction: column;
-                gap: 10px;
+                align-items: center; /* Center items vertically */
+                gap: 1.5rem;
+            }
+            /* Adjust image sizes for smaller screens to prevent overflow */
+            .header-top .logo-img, .header-top .ayush-logo {
+                height: auto;
+                width: 100%;
+                max-width: 10rem;
             }
             .header-top .ayush-logo {
-                height: 6rem;
+                max-width: 8rem;
+            }
+            .toggle-group {
+                margin-left: 0; /* Align buttons with other elements */
+                justify-content: center;
             }
         }
     </style>
@@ -737,7 +748,7 @@
                         }
 
                         if (transferBlock.supplierQuality.score !== manufacturerQuality.score) {
-                             return { success: false, message: `Quality mismatch for herb ${id}. Transfer blocked.` };
+                             return { success: false, message: `Quality mismatch for herb ${id}. Production blocked.` };
                         }
                         
                         totalTransferWeight += parseFloat(transferBlock.weight);
@@ -752,7 +763,7 @@
                 const weightDifference = Math.abs(totalTransferWeight - finalWeight);
 
                 if (weightDifference > totalTransferWeight * tolerancePercentage) {
-                     return { success: false, message: `Total weight mismatch. Received: ${finalWeight} kg, expected: ${totalTransferWeight} kg. Production blocked.` };
+                        return { success: false, message: `Total weight mismatch. Received: ${finalWeight} kg, expected: ${totalTransferWeight} kg. Production blocked.` };
                 }
 
                 const data = { type: 'useHerb', manufacturerID, batchID, herbIDs, finalWeight, manufacturerQuality, timestamp: Date.now() };
