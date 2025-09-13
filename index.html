@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HerbalChain - Herbs Traceability System</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,507 +12,8 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <style>
-        /* ===================================================================
-           CSS STYLES
-           =================================================================== */
-
-        /* CSS Variables for a clean, colorful, and maintainable palette */
-        :root {
-            --primary-color: #212a2e;    /* A rich, deep green */
-            --secondary-color: #ffaaaa;  /* A warm amber */
-            --accent-color: #6A7B8E;     /* A calm, muted gray */
-            --text-dark: #2C3639;        /* Dark charcoal */
-            --text-light: #fff;          /* White */
-            --background-start: #f7ce47; /* Pale green start for gradient */
-            --background-end: #56fc7d;   /* Light green end for gradient */
-            --card-bg: #f7fce6;          /* Card background */
-            --shadow-color: rgba(136, 120, 120, 0.15);
-            --border-color: #C8E6C9;     /* Very light green */
-            --success-light: #DCF8E1;
-            --success-dark: #2E7D32;
-            --error-light: #FAD0D3;
-            --error-dark: #C62828;
-            --warning-light: #FFF9C4;
-            --warning-dark: #FF8F00;
-        }
-
-        :root.dark-mode {
-            --primary-color: #A3D4D1;
-            --secondary-color: #F7D794;
-            --accent-color: #99AAB5;
-            --text-dark: #EAEAEA;
-            --text-light: #1A1A1A;
-            --background-start: #1A2830;
-            --background-end: #2C3E50;
-            --card-bg: #2B3748;
-            --shadow-color: rgba(0, 0, 0, 0.5);
-            --border-color: #3C4E61;
-            --success-light: #1F4538;
-            --success-dark: #90EE90;
-            --error-light: #5C2A2A;
-            --error-dark: #FF5A5F;
-            --warning-light: #4A4A2C;
-            --warning-dark: #FFD700;
-        }
-
-        /* General Body and Main Container Styles */
-        body {
-            font-family: 'Lato', sans-serif;
-            background: linear-gradient(135deg, var(--background-start), var(--background-end));
-            color: var(--text-dark);
-            line-height: 1.6;
-            margin: 0;
-            padding: 2rem;
-            animation: fadeIn 1.5s ease-in-out;
-            min-height: 100vh;
-            transition: background-color 0.5s ease, color 0.5s ease;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: auto;
-            background: var(--card-bg);
-            padding: 3rem;
-            border-radius: 1.5rem;
-            box-shadow: 0 25px 50px var(--shadow-color);
-            transition: transform 0.3s ease-in-out, background 0.5s ease;
-            border: 1px solid var(--border-color);
-        }
-        
-        /* Top image styling */
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 2rem;
-            margin-bottom: 2rem;
-            flex-wrap: wrap; /* Allow items to wrap on smaller screens */
-            gap: 1rem;
-        }
-        
-        .header-top .logo-img {
-            height: 10rem;
-            width: auto; /* Maintain aspect ratio */
-        }
-
-        .header-top .ayush-logo {
-            height: 8rem;
-            width: auto; /* Maintain aspect ratio */
-        }
-        
-        .header-top .herb-img {
-            height: 10rem;
-            width: auto; /* Maintain aspect ratio */
-        }
-        
-        .theme-toggle-btn, .lang-toggle-btn {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 5px var(--shadow-color);
-        }
-
-        .theme-toggle-btn:hover, .lang-toggle-btn:hover {
-            background: var(--border-color);
-            transform: scale(1.1);
-        }
-        
-        .toggle-group {
-            display: flex;
-            gap: 1rem;
-        }
-
-        /* Typography */
-        h1, h2, h3 {
-            font-family: 'Playfair Display', serif;
-            font-weight: 700;
-        }
-
-        h1 {
-            font-size: 3rem;
-            text-align: center;
-            margin-bottom: 0.5rem;
-            letter-spacing: -1px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-            color: var(--primary-color);
-        }
-
-        h2 {
-            font-size: 2rem;
-            margin-bottom: 1.5rem;
-            border-left: 6px solid var(--secondary-color);
-            padding-left: 1.25rem;
-            color: var(--primary-color);
-        }
-
-        .description {
-            text-align: center;
-            color: var(--accent-color);
-            margin-bottom: 3rem;
-            font-style: italic;
-            font-size: 1.1rem;
-        }
-
-        /* Tab Navigation */
-        .tab-nav {
-            display: flex;
-            justify-content: center;
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .tab-button {
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 0.75rem;
-            font-weight: 700;
-            color: var(--text-dark);
-            background: var(--border-color);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            font-size: 1rem;
-            text-transform: uppercase;
-        }
-
-        .tab-button:hover {
-            transform: translateY(-5px);
-            background: var(--secondary-color);
-            color: var(--text-dark);
-            box-shadow: 0 8px 12px var(--shadow-color);
-        }
-
-        .tab-button.active {
-            background: linear-gradient(45deg, var(--primary-color), #4CAF50);
-            color: var(--text-light);
-            transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(56, 125, 67, 0.4);
-        }
-
-        /* Tab Content */
-        .tab-content {
-            display: none;
-            background: var(--card-bg);
-            padding: 2.5rem;
-            border-radius: 1.5rem;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
-            animation: slideIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-            border: 1px solid var(--border-color);
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes slideIn {
-            from { transform: translateY(30px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        /* Form Elements */
-        .form-section {
-            display: grid;
-            gap: 1.5rem;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
-
-        input, select {
-            width: 100%;
-            padding: 0.85rem;
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: var(--background-start);
-            color: var(--text-dark);
-        }
-        
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 4px rgba(248, 180, 0, 0.2);
-        }
-
-        .btn {
-            padding: 1rem 2.5rem;
-            font-size: 1.1rem;
-            font-weight: 700;
-            border-radius: 0.75rem;
-            cursor: pointer;
-            border: none;
-            color: var(--text-light);
-            background: var(--primary-color);
-            transition: background 0.3s ease, transform 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-            text-transform: uppercase;
-        }
-
-        .btn:hover {
-            background: #2E7D32;
-            transform: translateY(-3px);
-            box-shadow: 0 6px 10px rgba(0,0,0,0.3);
-        }
-
-        .status-message {
-            margin-top: 1rem;
-            padding: 1rem;
-            border-radius: 0.75rem;
-            font-weight: 700;
-            text-align: center;
-            animation: fadeIn 0.5s ease-in-out;
-        }
-
-        .status-message.success {
-            background: var(--success-light);
-            color: var(--success-dark);
-        }
-
-        .status-message.error {
-            background: var(--error-light);
-            color: var(--error-dark);
-        }
-
-        .status-message.warning {
-            background: var(--warning-light);
-            color: var(--warning-dark);
-        }
-
-        /* QR Code & Trace Results */
-        .qr-area {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 2rem;
-            gap: 1rem;
-            text-align: center;
-        }
-
-        #qrcode {
-            background: var(--card-bg);
-            padding: 1.5rem;
-            border-radius: 1rem;
-            box-shadow: 0 5px 15px var(--shadow-color);
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 20px;
-        }
-        #qrcode > div {
-            padding: 5px;
-            border: 1px solid var(--border-color);
-            border-radius: 5px;
-            background: #F1F8E9;
-        }
-        #generated-qr-count {
-            font-style: italic;
-            color: var(--accent-color);
-            font-size: 1.1rem;
-        }
-
-        #trace-result {
-            margin-top: 2rem;
-            padding: 2rem;
-            background: var(--card-bg);
-            border-radius: 1.5rem;
-            box-shadow: 0 5px 15px var(--shadow-color);
-            transition: all 0.5s ease-in-out;
-        }
-        
-        #trace-result.hidden {
-            display: none;
-        }
-
-        .trace-content .history-item {
-            border-left: 4px solid var(--secondary-color);
-            padding-left: 1.5rem;
-            margin-top: 1.5rem;
-        }
-        .history-item p {
-            margin: 0.5rem 0;
-        }
-        .history-item ul {
-            padding-left: 1.5rem;
-        }
-
-        /* Blockchain Ledger */
-        .ledger-section {
-            margin-top: 3rem;
-            text-align: center;
-        }
-
-        .ledger-table-container {
-            overflow-x: auto;
-            background: var(--card-bg);
-            border-radius: 1.5rem;
-            padding: 1.5rem;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
-            border: 1px solid var(--border-color);
-        }
-
-        .ledger-table {
-            width: 100%;
-            border-collapse: collapse;
-            white-space: nowrap;
-        }
-        .ledger-table th, .ledger-table td {
-            padding: 1rem 1.2rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .ledger-table th {
-            font-weight: 700;
-            color: var(--primary-color);
-            text-transform: uppercase;
-            font-size: 0.9rem;
-        }
-        .ledger-table td {
-            font-size: 0.95rem;
-            word-break: break-all;
-            color: var(--text-dark);
-        }
-        .ledger-table td pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-size: 0.85rem;
-            font-family: 'Lato', sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-        .ledger-table tr:last-child td {
-            border-bottom: none;
-        }
-        
-        /* New styles for collapsible data */
-        .ledger-data-wrapper {
-            max-height: 25px; /* Adjust as needed */
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-        .ledger-data-wrapper.expanded {
-            max-height: 500px; /* Large enough to show all content */
-        }
-        .data-summary {
-            cursor: pointer;
-            font-weight: bold;
-            color: var(--primary-color);
-            display: inline-block;
-            transition: color 0.3s ease;
-        }
-        .data-summary:hover {
-            color: var(--secondary-color);
-        }
-        .data-pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-size: 0.85rem;
-            font-family: 'Lato', sans-serif;
-        }
-        .download-btn {
-            margin-top: 2rem;
-            background-color: #007bff;
-            color: white;
-            border-radius: 0.75rem;
-            padding: 1rem 2.5rem;
-            font-size: 1.1rem;
-            font-weight: 700;
-            cursor: pointer;
-            border: none;
-            transition: background 0.3s ease, transform 0.3s ease;
-            text-transform: uppercase;
-        }
-
-        .download-btn:hover {
-            background-color: #0056b3;
-            transform: translateY(-3px);
-        }
-
-        /* Utility classes for layout */
-        .form-group-flex {
-            display: flex;
-            gap: 1rem;
-            align-items: flex-end;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
-            h1 { font-size: 2rem; }
-            h2 { font-size: 1.5rem; }
-            .description { font-size: 1rem; margin-bottom: 2rem;}
-            .tab-nav { gap: 1rem; }
-            .tab-button {
-                padding: 0.75rem 1rem;
-                font-size: 0.9rem;
-            }
-            .tab-content { padding: 1.5rem; }
-            .form-section { gap: 1rem; }
-            .form-group-flex {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 0.5rem;
-            }
-            .form-group-flex .btn {
-                margin-top: 0.5rem;
-            }
-            /* Adjustments to the header to stack and center elements */
-            .header-top {
-                flex-direction: column;
-                align-items: center; /* Centers all direct children */
-                gap: 1rem;
-            }
-            .header-top .logo-img {
-                height: 8rem;
-                max-width: 100%;
-            }
-            .header-top .ayush-logo {
-                height: 6rem;
-                max-width: 100%;
-            }
-            .toggle-group {
-                margin-top: 1rem;
-            }
-            /* Smaller table text for mobile */
-            .ledger-table th, .ledger-table td {
-                padding: 0.75rem;
-                font-size: 0.8rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            body { padding: 1rem; }
-            .container { padding: 1rem; }
-            h1 { font-size: 1.8rem; }
-            .tab-button {
-                font-size: 0.8rem;
-                padding: 0.75rem;
-            }
-            .header-top .logo-img { height: 6rem; }
-            .header-top .ayush-logo { height: 4.5rem; }
-        }
-    </style>
+    
+    <link rel="stylesheet" href="style.css">
 </head>
 <body class="min-h-screen">
 
@@ -538,24 +40,37 @@
             <h2>Herb Collection</h2>
             <div class="form-section">
                 <div>
-                    <label for="herb-name">Herb Name:</label>
-                    <input type="text" id="herb-name" placeholder="Example: Ashwagandha" required>
+                    <label for="collector-herb-name">Herb Name:</label>
+                    <input type="text" id="collector-herb-name" placeholder="Example: Ashwagandha" required>
                 </div>
                 <div>
-                    <label for="herb-location">Collection Location:</label>
+                    <label for="collector-location">Collector Location:</label>
                     <div class="form-group-flex">
-                        <input type="text" id="herb-location" placeholder="Example: Rajasthan, Jodhpur" required>
-                        <button id="capture-location-btn" class="btn" style="white-space: nowrap; font-size: 0.9rem;">Auto-Capture</button>
+                        <input type="text" id="collector-location" placeholder="Example: Lat: 26.7677, Lon: 75.8480" required>
+                        <button id="capture-collector-location-btn" class="btn" style="white-space: nowrap; font-size: 0.9rem;">Auto-Capture</button>
                     </div>
                 </div>
                 <div>
-                    <label for="herb-quantity">Units:</label>
-                    <input type="number" id="herb-quantity" placeholder="100" required>
+                    <label for="collector-quantity">Units:</label>
+                    <div class="unit-input-group">
+                        <input type="number" id="collector-quantity" placeholder="100" required>
+                        <select id="collector-unit-select">
+                            <option value="Kg">Kg</option>
+                            <option value="Gram">Gram</option>
+                            <option value="Pieces">Pieces</option>
+                            <option value="Bundles">Bundles</option>
+                        </select>
+                    </div>
                 </div>
-                <div>
-                    <label for="herb-image">Image for AI Quality Check (URL):</label>
-                    <input type="text" id="herb-image" placeholder="Example: https://example.com/herb.jpg">
-                    <button id="check-collector-quality-btn" class="btn" style="margin-top: 0.5rem; width: 100%; font-size: 0.9rem;">Run AI Quality Check</button>
+                <div class="ai-camera-container">
+                    <label>AI Quality Check (Live Camera):</label>
+                    <video id="collector-camera-preview" autoplay style="display:none; width: 100%; max-width: 400px; border: 1px solid var(--border-color); border-radius: 0.5rem;"></video>
+                    <canvas id="collector-canvas" style="display:none;"></canvas>
+                    <div class="camera-buttons">
+                        <button id="start-collector-camera-btn" class="btn" style="font-size: 0.9rem;">Start Camera</button>
+                        <button id="check-collector-quality-btn" class="btn" style="font-size: 0.9rem; display:none;">Take Snapshot & Check</button>
+                        <button id="stop-collector-camera-btn" class="btn" style="font-size: 0.9rem; display:none;">Stop Camera</button>
+                    </div>
                 </div>
                 <div id="collector-quality-result" class="status-message"></div>
                 <button id="add-herb-btn" class="btn">Record on Blockchain</button>
@@ -568,23 +83,46 @@
             <div class="form-section">
                 <div>
                     <label for="transfer-herb-id">Herb ID:</label>
-                    <input type="text" id="transfer-herb-id" placeholder="Example: HERB-1698205632313" required>
+                    <select id="transfer-herb-id" required>
+                        <option value="">Select a collected herb...</option>
+                    </select>
                 </div>
                 <div>
                     <label for="transfer-to">Transfer To (ID):</label>
                     <select id="transfer-to" required>
                         <option value="">Select Manufacturer</option>
-                        <option value="MANU-001">Manufacturer ABC</option>
+                        <option value="MANU-001">Pinak Dave</option>
                     </select>
+                </div>
+                 <div>
+                    <label for="supplier-location">Supplier Location:</label>
+                    <div class="form-group-flex">
+                        <input type="text" id="supplier-location" placeholder="e.g., Supplier Warehouse, Delhi" required>
+                        <button id="capture-supplier-location-btn" class="btn" style="white-space: nowrap; font-size: 0.9rem;">Auto-Capture</button>
+                    </div>
                 </div>
                 <div>
                     <label for="supplier-weight">Units:</label>
-                    <input type="number" id="supplier-weight" placeholder="98" required>
+                     <div class="unit-input-group">
+                        <input type="number" id="supplier-weight" placeholder="98" required>
+                        <select id="supplier-unit-select">
+                            <option value="Kg">Kg</option>
+                            <option value="Gram">Gram</option>
+                            <option value="Pieces">Pieces</option>
+                            <option value="Bundles">Bundles</option>
+                        </select>
+                    </div>
+                    <span id="available-units-supplier"></span>
                 </div>
-                <div>
-                    <label for="supplier-image">Image for AI Quality Check (URL):</label>
-                    <input type="text" id="supplier-image" placeholder="Example: https://example.com/supplier-herb.jpg">
-                    <button id="check-supplier-quality-btn" class="btn" style="margin-top: 0.5rem; width: 100%; font-size: 0.9rem;">Run AI Quality Check</button>
+                <div class="ai-camera-container">
+                    <label>AI Quality Check (Live Camera):</label>
+                    <video id="supplier-camera-preview" autoplay style="display:none; width: 100%; max-width: 400px; border: 1px solid var(--border-color); border-radius: 0.5rem;"></video>
+                    <canvas id="supplier-canvas" style="display:none;"></canvas>
+                    <div class="camera-buttons">
+                        <button id="start-supplier-camera-btn" class="btn" style="font-size: 0.9rem;">Start Camera</button>
+                        <button id="check-supplier-quality-btn" class="btn" style="font-size: 0.9rem; display:none;">Take Snapshot & Check</button>
+                        <button id="stop-supplier-camera-btn" class="btn" style="font-size: 0.9rem; display:none;">Stop Camera</button>
+                    </div>
                 </div>
                 <div id="supplier-quality-result" class="status-message"></div>
                 <button id="transfer-herb-btn" class="btn">Transfer</button>
@@ -600,17 +138,41 @@
                     <input type="text" id="batch-id" placeholder="Example: MED-BATCH-001" required>
                 </div>
                 <div>
-                    <label for="used-herb-ids">Used Herb IDs (comma-separated):</label>
-                    <input type="text" id="used-herb-ids" placeholder="Example: HERB-1698205632313, HERB-1698205632314" required>
+                    <label for="manufacturer-location">Production Location:</label>
+                    <div class="form-group-flex">
+                        <input type="text" id="manufacturer-location" placeholder="e.g., Production Unit, Haridwar" required>
+                        <button id="capture-manufacturer-location-btn" class="btn" style="white-space: nowrap; font-size: 0.9rem;">Auto-Capture</button>
+                    </div>
                 </div>
-                <div>
-                    <label for="manufacturer-weight">Units:</label>
-                    <input type="number" id="manufacturer-weight" placeholder="98" required>
+
+                <div id="multi-batch-container">
+                    <label>Used Herb Batches:</label>
+                    <div id="multi-batch-inputs" class="multi-batch-input-container">
+                        </div>
+                    <button id="add-batch-btn" class="btn" style="width: auto; margin-top: 1rem;">Add Herb Batch</button>
                 </div>
+
                 <div>
-                    <label for="manufacturer-image">Final Herb Image (URL):</label>
-                    <input type="text" id="manufacturer-image" placeholder="Example: https://example.com/manufacturer-herb.jpg">
-                    <button id="check-manufacturer-quality-btn" class="btn" style="margin-top: 0.5rem; width: 100%; font-size: 0.9rem;">Run AI Quality Check</button>
+                    <label for="final-medicine-units">Final Medicine Units:</label>
+                    <div class="unit-input-group">
+                        <input type="number" id="final-medicine-units" placeholder="Units Produced" required>
+                         <select id="final-medicine-unit-select">
+                            <option value="Kg">Kg</option>
+                            <option value="Gram">Gram</option>
+                            <option value="Pieces">Pieces</option>
+                            <option value="Bottles">Bottles</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="ai-camera-container">
+                    <label>Final Product Quality Check (Live Camera):</label>
+                    <video id="manufacturer-camera-preview" autoplay style="display:none; width: 100%; max-width: 400px; border: 1px solid var(--border-color); border-radius: 0.5rem;"></video>
+                    <canvas id="manufacturer-canvas" style="display:none;"></canvas>
+                    <div class="camera-buttons">
+                        <button id="start-manufacturer-camera-btn" class="btn" style="font-size: 0.9rem;">Start Camera</button>
+                        <button id="check-manufacturer-quality-btn" class="btn" style="font-size: 0.9rem; display:none;">Take Snapshot & Check</button>
+                        <button id="stop-manufacturer-camera-btn" class="btn" style="font-size: 0.9rem; display:none;">Stop Camera</button>
+                    </div>
                 </div>
                 <div id="manufacturer-quality-result" class="status-message"></div>
                 <button id="produce-medicine-btn" class="btn">Produce Medicine & Generate QR Code</button>
@@ -626,22 +188,16 @@
         <div id="consumer" class="tab-content">
             <h2>Scan QR Code</h2>
             <div class="form-section">
-                <div id="reader" style="width: 100%; max-width: 400px; margin: auto;"></div>
-                <div style="text-align: center; margin-top: 1rem;">
-                    <button id="start-scan-btn" class="btn">Start Scanner</button>
-                    <button id="stop-scan-btn" class="btn" style="display: none;">Stop Scanner</button>
-                </div>
-                <p style="text-align: center; margin: 1rem 0;">OR</p>
                 <div>
-                    <label for="qr-input">Enter QR Code Data:</label>
-                    <input type="text" id="qr-input" placeholder="Text from QR Code">
+                    <label for="qr-image-input">Upload QR Code Image to Trace:</label>
+                    <input type="file" id="qr-image-input" accept="image/*">
                 </div>
-                <button id="scan-qr-btn" class="btn">Trace</button>
             </div>
             <div id="trace-result" class="hidden">
                 <h3 class="title">Trace Result</h3>
                 <div id="trace-content"></div>
             </div>
+            <div id="file-scanner-container" style="display: none;"></div>
         </div>
 
         <div class="ledger-section">
@@ -667,793 +223,6 @@
         </div>
     </div>
 
-    <script>
-        /* ===================================================================
-           JAVASCRIPT LOGIC
-           =================================================================== */
-
-        //---------------------------------------------------------
-        // Simulation of Blockchain and Smart Contracts
-        //---------------------------------------------------------
-        class Block {
-            constructor(timestamp, data, previousHash = '') {
-                this.timestamp = timestamp;
-                this.data = data;
-                this.previousHash = previousHash;
-                this.hash = this.calculateHash();
-            }
-
-            calculateHash() {
-                const str = this.previousHash + this.timestamp + JSON.stringify(this.data);
-                return btoa(unescape(encodeURIComponent(str))).substr(0, 32);
-            }
-        }
-
-        class Blockchain {
-            constructor() {
-                this.chain = [this.createGenesisBlock()];
-                this.pendingTransactions = [];
-                this.metadata = {};
-            }
-
-            createGenesisBlock() {
-                return new Block('2025-01-01', 'Genesis Block', '0');
-            }
-
-            getLatestBlock() {
-                return this.chain[this.chain.length - 1];
-            }
-
-            addBlock(newBlock) {
-                newBlock.previousHash = this.getLatestBlock().hash;
-                newBlock.hash = newBlock.calculateHash();
-                this.chain.push(newBlock);
-            }
-
-            // Smart Contracts
-            registerHerb(collectorID, herbID, name, location, quantity, quality) {
-                if (this.metadata[herbID]) {
-                    return { success: false, message: 'This herb ID already exists.' };
-                }
-                const data = { type: 'registerHerb', collectorID, herbID, name, location, quantity, quality, timestamp: Date.now() };
-                this.addBlock(new Block(data.timestamp, data));
-                this.metadata[herbID] = { status: 'collected', name, location, quantity, quality, history: [data] };
-                return { success: true, message: `Herb ID ${herbID} successfully recorded.` };
-            }
-
-            transferHerb(fromID, toID, herbID, weight, supplierQuality) {
-                const herb = this.metadata[herbID];
-                if (!herb) {
-                    return { success: false, message: 'Herb ID does not exist.' };
-                }
-                if (herb.status !== 'collected' && herb.status !== 'transferred') {
-                    return { success: false, message: 'This herb cannot be transferred.' };
-                }
-                
-                // Old logic: Checking for exact score match.
-                // if (!collectorQuality || !supplierQuality || collectorQuality.score !== supplierQuality.score) {
-                //     return { success: false, message: `QUALITY MISMATCH! Collector score: ${collectorQuality?.score || 'N/A'}, Supplier score: ${supplierQuality?.score || 'N/A'}. Transfer blocked.` };
-                // }
-                
-                // New logic: Check if supplier's quality score is below 70
-                if (supplierQuality.score < 70) {
-                    return { success: false, message: `QUALITY BLOCKED! Supplier's score is too low: ${supplierQuality.score}/100. Transfer denied.` };
-                }
-
-
-                const recordedQuantity = herb.quantity;
-                const transferWeight = parseFloat(weight);
-                const tolerancePercentage = 0.05;
-
-                if (isNaN(transferWeight)) {
-                    return { success: false, message: 'Invalid weight entered.' };
-                }
-
-                const difference = Math.abs(recordedQuantity - transferWeight);
-                if (difference > recordedQuantity * tolerancePercentage) {
-                    return { success: false, message: `FRAUD ALERT! Weight mismatch. Recorded: ${recordedQuantity} Kg, Received: ${transferWeight} Kg. Difference exceeds 5% tolerance.` };
-                }
-
-                const data = { type: 'transferHerb', fromID, toID, herbID, weight, supplierQuality, timestamp: Date.now() };
-                this.addBlock(new Block(data.timestamp, data));
-                herb.status = 'transferred';
-                herb.history.push(data);
-                return { success: true, message: `Herb ID ${herbID} successfully transferred.` };
-            }
-            
-            useHerbInMedicine(batchID, manufacturerID, herbIDs, finalWeight, manufacturerQuality) {
-                const invalidHerbs = [];
-                let totalTransferWeight = 0;
-                
-                // New logic: Check if manufacturer's quality score is below 60
-                if (manufacturerQuality.score < 60) {
-                    return { success: false, message: `QUALITY BLOCKED! Manufacturer's score is too low: ${manufacturerQuality.score}/100. Production denied.` };
-                }
-
-                for (const id of herbIDs) {
-                    const herb = this.metadata[id];
-                    
-                    if (!herb || herb.status !== 'transferred') {
-                        invalidHerbs.push(id);
-                    } else {
-                        const transferBlock = herb.history.find(h => h.type === 'transferHerb');
-
-                        if (!transferBlock) {
-                            return { success: false, message: `No transfer record found for herb ${id}.` };
-                        }
-
-                        // Old logic: Checking for exact score match.
-                        // if (transferBlock.supplierQuality.score !== manufacturerQuality.score) {
-                        //      return { success: false, message: `Quality mismatch for herb ${id}. Production blocked.` };
-                        // }
-                        
-                        totalTransferWeight += parseFloat(transferBlock.weight);
-                    }
-                }
-                
-                if (invalidHerbs.length > 0) {
-                    return { success: false, message: `The following herbs are invalid or not yet transferred: ${invalidHerbs.join(', ')}` };
-                }
-                
-                const tolerancePercentage = 0.05;
-                const weightDifference = Math.abs(totalTransferWeight - finalWeight);
-
-                if (weightDifference > totalTransferWeight * tolerancePercentage) {
-                        return { success: false, message: `Total weight mismatch. Received: ${finalWeight} kg, expected: ${totalTransferWeight} kg. Production blocked.` };
-                }
-
-                const data = { type: 'useHerb', manufacturerID, batchID, herbIDs, finalWeight, manufacturerQuality, timestamp: Date.now() };
-                this.addBlock(new Block(data.timestamp, data));
-                herbIDs.forEach(id => {
-                    this.metadata[id].status = 'used_in_medicine';
-                    this.metadata[id].history.push(data);
-                });
-                return { success: true, message: `Batch ${batchID} successfully recorded.` };
-            }
-        }
-
-        //---------------------------------------------------------
-        // DOM ELEMENTS AND EVENT LISTENERS
-        //---------------------------------------------------------
-        const herbChain = new Blockchain();
-        const tabs = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
-        const ledgerBody = document.getElementById('ledger-body');
-        const qrcodeDiv = document.getElementById('qrcode');
-        const qrTitle = document.getElementById('qr-title');
-        const generatedQrCount = document.getElementById('generated-qr-count');
-        const downloadPdfBtn = document.getElementById('download-pdf-btn');
-
-        let html5QrcodeScanner;
-        const startScanBtn = document.getElementById('start-scan-btn');
-        const stopScanBtn = document.getElementById('stop-scan-btn');
-        const qrInput = document.getElementById('qr-input');
-        const traceResultDiv = document.getElementById('trace-result');
-        const traceContent = document.getElementById('trace-content');
-
-        let collectorQualityData = null;
-        let supplierQualityData = null;
-        let manufacturerQualityData = null;
-
-        function simpleHash(str) {
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                const char = str.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash |= 0;
-            }
-            const score = (Math.abs(hash) % 51) + 50;
-            return score;
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const initialTab = document.querySelector('.tab-button.active');
-            if (initialTab) {
-                initialTab.classList.add('active');
-                const contentId = initialTab.getAttribute('data-tab');
-                document.getElementById(contentId).classList.add('active');
-            }
-            updateLedger();
-            // Check for saved theme preference
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark') {
-                document.documentElement.classList.add('dark-mode');
-            }
-        });
-
-        tabs.forEach(button => {
-            button.addEventListener('click', () => {
-                const tab = button.dataset.tab;
-                tabs.forEach(btn => btn.classList.remove('active'));
-                button.classList.add('active');
-                tabContents.forEach(content => content.classList.remove('active'));
-                document.getElementById(tab).classList.add('active');
-                
-                if (tab === 'consumer') {
-                    startScanner();
-                } else {
-                    stopScanner();
-                }
-                
-                if (tab === 'collector') {
-                    getGeoLocation();
-                }
-            });
-        });
-
-        function updateLedger() {
-            if (herbChain.chain.length <= 1) {
-                ledgerBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--accent-color);">No transactions yet.</td></tr>';
-                return;
-            }
-            ledgerBody.innerHTML = '';
-            herbChain.chain.slice(1).reverse().forEach((block, index) => {
-                const data = block.data;
-                let weightMatchStatus = 'N/A';
-                let qualityMatchStatus = 'N/A';
-
-                if (data.type === 'transferHerb' && data.herbID) {
-                    const herbMetadata = herbChain.metadata[data.herbID];
-                    
-                    if (herbMetadata.quality && data.supplierQuality) {
-                        if (herbMetadata.quality.score === data.supplierQuality.score) {
-                            qualityMatchStatus = '✅ Matched';
-                        } else {
-                            qualityMatchStatus = `🚨 Mismatch (${herbMetadata.quality.score} vs ${data.supplierQuality.score})`;
-                        }
-                    }
-
-                    if (herbMetadata.quantity) {
-                        const recordedQuantity = herbMetadata.quantity;
-                        const transferWeight = parseFloat(data.weight);
-                        const tolerancePercentage = 0.05;
-                        const difference = Math.abs(recordedQuantity - transferWeight);
-                        if (difference <= recordedQuantity * tolerancePercentage) {
-                            weightMatchStatus = '✅ Matched';
-                        } else {
-                            weightMatchStatus = `🚨 Mismatch (${recordedQuantity} vs ${transferWeight})`;
-                        }
-                    }
-                } else if (data.type === 'useHerb' && data.batchID) {
-                    if (data.manufacturerQuality) {
-                        const usedHerbs = data.herbIDs;
-                        let totalSupplierScore = 0;
-                        let validHerbsCount = 0;
-                        
-                        usedHerbs.forEach(herbId => {
-                             const herb = herbChain.metadata[herbId];
-                             if (herb && herb.history.find(h => h.type === 'transferHerb')) {
-                                 const transferBlock = herb.history.find(h => h.type === 'transferHerb');
-                                 if (transferBlock && transferBlock.supplierQuality) {
-                                     totalSupplierScore += transferBlock.supplierQuality.score;
-                                     validHerbsCount++;
-                                 }
-                             }
-                        });
-                        
-                        const averageSupplierScore = validHerbsCount > 0 ? totalSupplierScore / validHerbsCount : 0;
-                        
-                        if (data.manufacturerQuality.score >= 60) {
-                            qualityMatchStatus = '✅ Passed (>=60)';
-                        } else {
-                            qualityMatchStatus = `🚨 Failed (<60)`;
-                        }
-
-                        const totalTransferWeight = data.herbIDs.reduce((sum, id) => {
-                            const herb = herbChain.metadata[id];
-                            if (herb) {
-                                const transferBlock = herb.history.find(h => h.type === 'transferHerb');
-                                if (transferBlock) {
-                                    return sum + parseFloat(transferBlock.weight);
-                                }
-                            }
-                            return sum;
-                        }, 0);
-
-                        const finalWeight = parseFloat(data.finalWeight);
-                        const tolerancePercentage = 0.05;
-                        const difference = Math.abs(totalTransferWeight - finalWeight);
-
-                        if (difference <= totalTransferWeight * tolerancePercentage) {
-                            weightMatchStatus = '✅ Matched';
-                        } else {
-                            weightMatchStatus = `🚨 Mismatch (${totalTransferWeight} vs ${finalWeight})`;
-                        }
-                    }
-                }
-                
-                let formattedData = '';
-                for (const key in data) {
-                    if (data.hasOwnProperty(key)) {
-                        let value = data[key];
-                        if (typeof value === 'object' && value !== null) {
-                            value = JSON.stringify(value, null, 2);
-                        }
-                        formattedData += `<strong>${key}:</strong> ${value}<br>`;
-                    }
-                }
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${herbChain.chain.length - 1 - index}</td>
-                    <td>${block.previousHash.substring(0, 10)}...</td>
-                    <td>${block.hash.substring(0, 10)}...</td>
-                    <td>
-                        <details>
-                            <summary class="data-summary">Show Details</summary>
-                            <pre>${formattedData}</pre>
-                        </details>
-                    </td>
-                    <td>${weightMatchStatus}</td>
-                    <td>${qualityMatchStatus}</td>
-                `;
-                ledgerBody.appendChild(row);
-            });
-        }
-        
-        document.getElementById('check-collector-quality-btn').addEventListener('click', () => {
-            const qualityDiv = document.getElementById('collector-quality-result');
-            const herbImage = document.getElementById('herb-image').value;
-
-            if (!herbImage) {
-                qualityDiv.textContent = 'Please provide an image URL to check quality.';
-                qualityDiv.className = 'status-message error';
-                return;
-            }
-            qualityDiv.textContent = 'Analyzing image for herb quality...';
-            qualityDiv.className = 'status-message';
-            
-            setTimeout(() => {
-                const qualityScore = simpleHash(herbImage);
-                const qualityStatus = qualityScore > 75 ? "Excellent" : (qualityScore > 50 ? "Good" : "Poor");
-                collectorQualityData = { score: qualityScore, status: qualityStatus };
-                qualityDiv.textContent = `AI analysis complete! Quality Score: ${qualityScore}/100. Status: ${qualityStatus}`;
-                qualityDiv.className = `status-message ${qualityStatus === 'Excellent' ? 'success' : (qualityStatus === 'Good' ? 'warning' : 'error')}`;
-            }, 2000); 
-        });
-
-        document.getElementById('check-supplier-quality-btn').addEventListener('click', () => {
-            const qualityDiv = document.getElementById('supplier-quality-result');
-            const supplierImage = document.getElementById('supplier-image').value;
-
-            if (!supplierImage) {
-                qualityDiv.textContent = 'Please provide an image URL to check quality.';
-                qualityDiv.className = 'status-message error';
-                return;
-            }
-            qualityDiv.textContent = 'Analyzing image for herb quality...';
-            qualityDiv.className = 'status-message';
-
-            setTimeout(() => {
-                const qualityScore = simpleHash(supplierImage);
-                let qualityStatus;
-                let statusClass;
-
-                if (qualityScore < 70) {
-                    qualityStatus = "Initial Check Failed!";
-                    statusClass = "error";
-                } else if (qualityScore >= 90) {
-                    qualityStatus = "Excellent";
-                    statusClass = "success";
-                } else {
-                    qualityStatus = "Passed";
-                    statusClass = "warning";
-                }
-                
-                supplierQualityData = { score: qualityScore, status: qualityStatus };
-                qualityDiv.textContent = `AI analysis complete! Quality Score: ${qualityScore}/100. Status: ${qualityStatus}`;
-                qualityDiv.className = `status-message ${statusClass}`;
-            }, 2000); 
-        });
-
-        document.getElementById('check-manufacturer-quality-btn').addEventListener('click', () => {
-            const qualityDiv = document.getElementById('manufacturer-quality-result');
-            const manufacturerImage = document.getElementById('manufacturer-image').value;
-
-            if (!manufacturerImage) {
-                qualityDiv.textContent = 'Please provide an image URL to check quality.';
-                qualityDiv.className = 'status-message error';
-                return;
-            }
-            qualityDiv.textContent = 'Analyzing image for herb quality...';
-            qualityDiv.className = 'status-message';
-
-            setTimeout(() => {
-                const qualityScore = simpleHash(manufacturerImage);
-                let qualityStatus;
-                let statusClass;
-
-                if (qualityScore < 60) {
-                    qualityStatus = "Initial Check Failed!";
-                    statusClass = "error";
-                } else if (qualityScore >= 80) {
-                    qualityStatus = "Excellent";
-                    statusClass = "success";
-                } else {
-                    qualityStatus = "Passed";
-                    statusClass = "warning";
-                }
-                
-                manufacturerQualityData = { score: qualityScore, status: qualityStatus };
-                qualityDiv.textContent = `AI analysis complete! Quality Score: ${qualityScore}/100. Status: ${qualityStatus}`;
-                qualityDiv.className = `status-message ${statusClass}`;
-            }, 2000);
-        });
-
-        function onScanSuccess(decodedText) {
-            console.log(`Scan result: ${decodedText}`);
-            stopScanner();
-            qrInput.value = decodedText;
-            processQrData(decodedText);
-        }
-
-        function onScanError(errorMessage) {
-            console.warn(`QR scan error: ${errorMessage}`);
-        }
-
-        function startScanner() {
-            if (!html5QrcodeScanner) {
-                html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
-                html5QrcodeScanner.render(onScanSuccess, onScanError);
-                startScanBtn.style.display = 'none';
-                stopScanBtn.style.display = 'inline-block';
-            }
-        }
-
-        function stopScanner() {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear().then(() => {
-                    console.log("Scanner stopped.");
-                }).catch(error => {
-                    console.error("Failed to stop scanner:", error);
-                });
-                html5QrcodeScanner = null;
-            }
-            startScanBtn.style.display = 'inline-block';
-            stopScanBtn.style.display = 'none';
-        }
-
-        function processQrData(qrInputData) {
-            let qrData;
-            try {
-                qrData = JSON.parse(qrInputData);
-                traceResultDiv.classList.remove('hidden');
-            } catch (e) {
-                traceResultDiv.classList.remove('hidden');
-                traceContent.innerHTML = '<p style="color: var(--error-dark);">Invalid QR Code Data. Please enter a valid JSON string.</p>';
-                return;
-            }
-
-            if (qrData.type === 'medicine' && qrData.batchID) {
-                traceContent.innerHTML = `<h4>Medicine Batch:</h4><p><strong>Batch ID:</strong> ${qrData.batchID}</p>`;
-                if (qrData.unitID) {
-                    traceContent.innerHTML += `<p><strong>Unit ID:</strong> ${qrData.unitID}</p>`;
-                }
-                
-                const useBlock = herbChain.chain.find(block => block.data.batchID === qrData.batchID);
-                const usedHerbs = useBlock ? useBlock.data.herbIDs : [];
-                
-                if (usedHerbs.length > 0) {
-                    traceContent.innerHTML += '<h4>Used Herbs:</h4>';
-                    usedHerbs.forEach(herbID => {
-                        const herb = herbChain.metadata[herbID];
-                        if (herb) {
-                            traceContent.innerHTML += `
-                                <div class="history-item">
-                                    <p><strong>Herb ID:</strong> ${herbID}</p>
-                                    <p><strong>Name:</strong> ${herb.name}</p>
-                                    <p><strong>Collection Location:</strong> ${herb.location}</p>
-                                    <p><strong>Quantity:</strong> ${herb.quantity} Kg</p>
-                                    <p><strong>Quality Check:</strong> ${herb.quality ? `Score: ${herb.quality.score}/100, Status: ${herb.quality.status}` : 'N/A'}</p>
-                                    <p><strong>Blockchain Records:</strong></p>
-                                    <ul style="list-style: disc; margin-left: 1rem;">
-                                        ${herb.history.map(h => `<li>${h.type} by ${h.collectorID || h.fromID || h.manufacturerID}</li>`).join('')}
-                                    </ul>
-                                </div>
-                            `;
-                        }
-                    });
-                } else {
-                    traceContent.innerHTML += '<p>No herb records found for this batch.</p>';
-                }
-            } else {
-                traceResultDiv.classList.remove('hidden');
-                traceContent.innerHTML = '<p style="color: var(--error-dark);">Invalid QR Code Data. No batch ID found.</p>';
-            }
-        }
-
-        function getGeoLocation() {
-            const statusDiv = document.getElementById('collector-status');
-            const locationInput = document.getElementById('herb-location');
-
-            if (navigator.geolocation) {
-                statusDiv.textContent = 'Fetching your location...';
-                statusDiv.className = 'status-message';
-                
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const lat = position.coords.latitude.toFixed(4);
-                        const lon = position.coords.longitude.toFixed(4);
-                        locationInput.value = `Lat: ${lat}, Lon: ${lon}`;
-                        statusDiv.textContent = 'Location auto-captured successfully.';
-                        statusDiv.className = 'status-message success';
-                    },
-                    (error) => {
-                        statusDiv.textContent = `Geolocation error: ${error.message}. Please enter manually.`;
-                        statusDiv.className = 'status-message error';
-                    },
-                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-                );
-            } else {
-                statusDiv.textContent = "Geolocation is not supported by your browser. Please enter the location manually.";
-                statusDiv.className = 'status-message error';
-            }
-        }
-
-        document.getElementById('add-herb-btn').addEventListener('click', () => {
-            const name = document.getElementById('herb-name').value;
-            const location = document.getElementById('herb-location').value;
-            const quantity = parseFloat(document.getElementById('herb-quantity').value);
-            const statusDiv = document.getElementById('collector-status');
-
-            if (!name || !location || isNaN(quantity) || quantity <= 0) {
-                statusDiv.textContent = 'Please fill all fields correctly.';
-                statusDiv.className = 'status-message error';
-                return;
-            }
-
-            if (!collectorQualityData) {
-                statusDiv.textContent = 'Please run the AI Quality Check first.';
-                statusDiv.className = 'status-message error';
-                return;
-            }
-
-            const herbID = 'HERB-' + Date.now();
-            const result = herbChain.registerHerb('COLLECTOR-001', herbID, name, location, quantity, collectorQualityData);
-            if (result.success) {
-                statusDiv.textContent = result.message;
-                statusDiv.className = 'status-message success';
-                document.getElementById('herb-name').value = '';
-                document.getElementById('herb-location').value = '';
-                document.getElementById('herb-quantity').value = '';
-                document.getElementById('herb-image').value = '';
-                document.getElementById('collector-quality-result').textContent = '';
-                collectorQualityData = null;
-                updateLedger();
-            } else {
-                statusDiv.textContent = result.message;
-                statusDiv.className = 'status-message error';
-            }
-        });
-
-        document.getElementById('transfer-herb-btn').addEventListener('click', () => {
-            const herbID = document.getElementById('transfer-herb-id').value;
-            const toID = document.getElementById('transfer-to').value;
-            const weight = document.getElementById('supplier-weight').value;
-            const statusDiv = document.getElementById('supplier-status');
-
-            if (!herbID || !toID || !weight) {
-                statusDiv.textContent = 'Please fill all fields.';
-                statusDiv.className = 'status-message error';
-                return;
-            }
-
-            if (!supplierQualityData) {
-                statusDiv.textContent = 'Please run the AI Quality Check first.';
-                statusDiv.className = 'status-message error';
-                return;
-            }
-            
-            const result = herbChain.transferHerb('SUPPLIER-001', toID, herbID, weight, supplierQualityData);
-            if (result.success) {
-                statusDiv.textContent = result.message;
-                statusDiv.className = 'status-message success';
-            } else {
-                statusDiv.textContent = result.message;
-                statusDiv.className = 'status-message error';
-            }
-            updateLedger();
-        });
-
-        document.getElementById('produce-medicine-btn').addEventListener('click', () => {
-            const batchID = document.getElementById('batch-id').value;
-            const usedHerbIDs = document.getElementById('used-herb-ids').value.split(',').map(id => id.trim());
-            const finalWeight = parseFloat(document.getElementById('manufacturer-weight').value);
-            const statusDiv = document.getElementById('manufacturer-status');
-
-            if (!batchID || usedHerbIDs.length === 0 || usedHerbIDs[0] === '' || isNaN(finalWeight)) {
-                statusDiv.textContent = 'Please fill all fields correctly.';
-                statusDiv.className = 'status-message error';
-                return;
-            }
-
-            if (!manufacturerQualityData) {
-                statusDiv.textContent = 'Please run the AI Quality Check first.';
-                statusDiv.className = 'status-message error';
-                return;
-            }
-
-            const result = herbChain.useHerbInMedicine(batchID, 'MANU-001', usedHerbIDs, finalWeight, manufacturerQualityData);
-            
-            if (result.success) {
-                qrcodeDiv.innerHTML = ''; 
-                qrTitle.style.display = 'block';
-                const qrCodeCount = Math.floor(finalWeight);
-                generatedQrCount.textContent = `Generating ${qrCodeCount} QR codes...`;
-
-                for (let i = 1; i <= qrCodeCount; i++) {
-                    const qrData = JSON.stringify({
-                        batchID: batchID,
-                        unitID: `${batchID}-${String(i).padStart(3, '0')}`,
-                        type: 'medicine',
-                        sourceHerbs: usedHerbIDs
-                    });
-                    
-                    const qrContainer = document.createElement('div');
-                    qrContainer.style.margin = '10px';
-                    qrContainer.style.textAlign = 'center';
-
-                    const qrElement = document.createElement('div');
-                    new QRCode(qrElement, {
-                        text: qrData,
-                        width: 100,
-                        height: 100,
-                    });
-                    qrContainer.appendChild(qrElement);
-
-                    const qrLabel = document.createElement('p');
-                    qrLabel.textContent = `Unit ${i}`;
-                    qrLabel.style.fontSize = '0.8em';
-                    qrContainer.appendChild(qrLabel);
-
-                    qrcodeDiv.appendChild(qrContainer);
-                }
-
-                statusDiv.textContent = result.message;
-                statusDiv.className = 'status-message success';
-                generatedQrCount.textContent = `Successfully generated ${qrCodeCount} unique QR codes.`;
-                updateLedger();
-            } else {
-                statusDiv.textContent = result.message;
-                statusDiv.className = 'status-message error';
-                generatedQrCount.textContent = '';
-            }
-        });
-
-        // PDF Download Function
-        downloadPdfBtn.addEventListener('click', () => {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            doc.setFontSize(20);
-            doc.text("HerbalChain Blockchain Ledger", 10, 15);
-            doc.setFontSize(10);
-            doc.text(`Report Generated: ${new Date().toLocaleString()}`, 10, 22);
-
-            const tableData = [];
-            const headers = ['Block ID', 'Previous Hash', 'Current Hash', 'Data', 'Weight Match', 'Quality Match'];
-
-            herbChain.chain.slice(1).reverse().forEach((block, index) => {
-                const data = block.data;
-                const formattedData = Object.entries(data).map(([key, value]) => {
-                    let formattedValue = value;
-                    if (typeof value === 'object' && value !== null) {
-                        formattedValue = JSON.stringify(value, null, 2).replace(/\"/g, '');
-                    }
-                    return `${key}: ${formattedValue}`;
-                }).join('\n');
-
-                let weightMatchStatus = 'N/A';
-                let qualityMatchStatus = 'N/A';
-
-                if (data.type === 'transferHerb' && data.herbID) {
-                    const herbMetadata = herbChain.metadata[data.herbID];
-                    if (data.supplierQuality) {
-                        if (data.supplierQuality.score >= 70) {
-                            qualityMatchStatus = 'Passed (>=70)';
-                        } else {
-                            qualityMatchStatus = `Failed (<70)`;
-                        }
-                    }
-                    if (herbMetadata.quantity) {
-                        const recordedQuantity = herbMetadata.quantity;
-                        const transferWeight = parseFloat(data.weight);
-                        const tolerancePercentage = 0.05;
-                        const difference = Math.abs(recordedQuantity - transferWeight);
-                        if (difference <= recordedQuantity * tolerancePercentage) {
-                            weightMatchStatus = 'Matched';
-                        } else {
-                            weightMatchStatus = `Mismatch (${recordedQuantity} vs ${transferWeight})`;
-                        }
-                    }
-                } else if (data.type === 'useHerb' && data.batchID) {
-                    if (data.manufacturerQuality) {
-                        if (data.manufacturerQuality.score >= 60) {
-                            qualityMatchStatus = 'Passed (>=60)';
-                        } else {
-                            qualityMatchStatus = `Failed (<60)`;
-                        }
-                    }
-                    const usedHerbs = data.herbIDs;
-                    let totalWeightUsed = 0;
-                    usedHerbs.forEach(herbId => {
-                        const herb = herbChain.metadata[herbId];
-                        if (herb) {
-                            const transferBlock = herb.history.find(h => h.type === 'transferHerb');
-                            if (transferBlock) {
-                                totalWeightUsed += parseFloat(transferBlock.weight);
-                            }
-                        }
-                    });
-
-                    const finalWeight = parseFloat(data.finalWeight);
-                    const tolerancePercentage = 0.05;
-                    const difference = Math.abs(totalWeightUsed - finalWeight);
-
-                    if (difference <= totalWeightUsed * tolerancePercentage) {
-                        weightMatchStatus = 'Matched';
-                    } else {
-                        weightMatchStatus = `Mismatch (${totalWeightUsed} vs ${finalWeight})`;
-                    }
-                }
-                
-                tableData.push([
-                    herbChain.chain.length - 1 - index,
-                    block.previousHash.substring(0, 10) + '...',
-                    block.hash.substring(0, 10) + '...',
-                    formattedData,
-                    weightMatchStatus,
-                    qualityMatchStatus
-                ]);
-            });
-
-            doc.autoTable({
-                startY: 30,
-                head: [headers],
-                body: tableData,
-                theme: 'striped',
-                styles: {
-                    fontSize: 8,
-                    cellPadding: 2,
-                    valign: 'middle',
-                    overflow: 'linebreak',
-                    cellWidth: 'wrap'
-                },
-                columnStyles: {
-                    0: { cellWidth: 15 },
-                    1: { cellWidth: 20 },
-                    2: { cellWidth: 20 },
-                    3: { cellWidth: 85 },
-                    4: { cellWidth: 25 },
-                    5: { cellWidth: 25 }
-                },
-            });
-
-            doc.save('HerbalChain_Ledger.pdf');
-        });
-
-        // Theme Toggle Logic
-        document.getElementById('theme-toggle').addEventListener('click', () => {
-            const body = document.documentElement;
-            body.classList.toggle('dark-mode');
-            const isDarkMode = body.classList.contains('dark-mode');
-            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-        });
-
-        // Language Toggle Logic (Placeholder)
-        document.getElementById('language-toggle').addEventListener('click', () => {
-            alert('Language selection feature coming soon!');
-        });
-
-
-        document.getElementById('capture-location-btn').addEventListener('click', getGeoLocation);
-        startScanBtn.addEventListener('click', startScanner);
-        stopScanBtn.addEventListener('click', stopScanner);
-        
-        document.getElementById('scan-qr-btn').addEventListener('click', () => {
-            const qrInput = document.getElementById('qr-input').value;
-            processQrData(qrInput);
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
