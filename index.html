@@ -730,10 +730,16 @@
                     return { success: false, message: 'This herb cannot be transferred.' };
                 }
                 
+                // Old logic: Checking for exact score match.
+                // if (!collectorQuality || !supplierQuality || collectorQuality.score !== supplierQuality.score) {
+                //     return { success: false, message: `QUALITY MISMATCH! Collector score: ${collectorQuality?.score || 'N/A'}, Supplier score: ${supplierQuality?.score || 'N/A'}. Transfer blocked.` };
+                // }
+                
                 // New logic: Check if supplier's quality score is below 70
                 if (supplierQuality.score < 70) {
                     return { success: false, message: `QUALITY BLOCKED! Supplier's score is too low: ${supplierQuality.score}/100. Transfer denied.` };
                 }
+
 
                 const recordedQuantity = herb.quantity;
                 const transferWeight = parseFloat(weight);
@@ -756,14 +762,14 @@
             }
             
             useHerbInMedicine(batchID, manufacturerID, herbIDs, finalWeight, manufacturerQuality) {
+                const invalidHerbs = [];
+                let totalTransferWeight = 0;
+                
                 // New logic: Check if manufacturer's quality score is below 60
                 if (manufacturerQuality.score < 60) {
                     return { success: false, message: `QUALITY BLOCKED! Manufacturer's score is too low: ${manufacturerQuality.score}/100. Production denied.` };
                 }
 
-                const invalidHerbs = [];
-                let totalTransferWeight = 0;
-                
                 for (const id of herbIDs) {
                     const herb = this.metadata[id];
                     
@@ -775,6 +781,11 @@
                         if (!transferBlock) {
                             return { success: false, message: `No transfer record found for herb ${id}.` };
                         }
+
+                        // Old logic: Checking for exact score match.
+                        // if (transferBlock.supplierQuality.score !== manufacturerQuality.score) {
+                        //      return { success: false, message: `Quality mismatch for herb ${id}. Production blocked.` };
+                        // }
                         
                         totalTransferWeight += parseFloat(transferBlock.weight);
                     }
@@ -884,12 +895,11 @@
                 if (data.type === 'transferHerb' && data.herbID) {
                     const herbMetadata = herbChain.metadata[data.herbID];
                     
-                    // Check if supplier's quality score met the threshold
-                    if (data.supplierQuality) {
-                        if (data.supplierQuality.score >= 70) {
-                            qualityMatchStatus = '✅ Passed (>=70)';
+                    if (herbMetadata.quality && data.supplierQuality) {
+                        if (herbMetadata.quality.score === data.supplierQuality.score) {
+                            qualityMatchStatus = '✅ Matched';
                         } else {
-                            qualityMatchStatus = `🚨 Failed (<70)`;
+                            qualityMatchStatus = `🚨 Mismatch (${herbMetadata.quality.score} vs ${data.supplierQuality.score})`;
                         }
                     }
 
@@ -905,36 +915,51 @@
                         }
                     }
                 } else if (data.type === 'useHerb' && data.batchID) {
-                    // Check if manufacturer's quality score met the threshold
                     if (data.manufacturerQuality) {
+                        const usedHerbs = data.herbIDs;
+                        let totalSupplierScore = 0;
+                        let validHerbsCount = 0;
+                        
+                        usedHerbs.forEach(herbId => {
+                             const herb = herbChain.metadata[herbId];
+                             if (herb && herb.history.find(h => h.type === 'transferHerb')) {
+                                 const transferBlock = herb.history.find(h => h.type === 'transferHerb');
+                                 if (transferBlock && transferBlock.supplierQuality) {
+                                     totalSupplierScore += transferBlock.supplierQuality.score;
+                                     validHerbsCount++;
+                                 }
+                             }
+                        });
+                        
+                        const averageSupplierScore = validHerbsCount > 0 ? totalSupplierScore / validHerbsCount : 0;
+                        
                         if (data.manufacturerQuality.score >= 60) {
                             qualityMatchStatus = '✅ Passed (>=60)';
                         } else {
                             qualityMatchStatus = `🚨 Failed (<60)`;
                         }
-                    }
-                    const usedHerbs = data.herbIDs;
-                    let totalWeightUsed = 0;
-                    usedHerbs.forEach(herbId => {
-                        const herb = herbChain.metadata[herbId];
-                        if (herb) {
-                            const transferBlock = herb.history.find(h => h.type === 'transferHerb');
-                            if (transferBlock) {
-                                totalWeightUsed += parseFloat(transferBlock.weight);
+
+                        const totalTransferWeight = data.herbIDs.reduce((sum, id) => {
+                            const herb = herbChain.metadata[id];
+                            if (herb) {
+                                const transferBlock = herb.history.find(h => h.type === 'transferHerb');
+                                if (transferBlock) {
+                                    return sum + parseFloat(transferBlock.weight);
+                                }
                             }
+                            return sum;
+                        }, 0);
+
+                        const finalWeight = parseFloat(data.finalWeight);
+                        const tolerancePercentage = 0.05;
+                        const difference = Math.abs(totalTransferWeight - finalWeight);
+
+                        if (difference <= totalTransferWeight * tolerancePercentage) {
+                            weightMatchStatus = '✅ Matched';
+                        } else {
+                            weightMatchStatus = `🚨 Mismatch (${totalTransferWeight} vs ${finalWeight})`;
                         }
-                    });
-                    
-                    const finalWeight = parseFloat(data.finalWeight);
-                    const tolerancePercentage = 0.05;
-                    const difference = Math.abs(totalWeightUsed - finalWeight);
-
-                    if (difference <= totalWeightUsed * tolerancePercentage) {
-                        weightMatchStatus = '✅ Matched';
-                    } else {
-                        weightMatchStatus = `🚨 Mismatch (${totalWeightUsed} vs ${finalWeight})`;
                     }
-
                 }
                 
                 let formattedData = '';
@@ -980,10 +1005,10 @@
             
             setTimeout(() => {
                 const qualityScore = simpleHash(herbImage);
-                const qualityStatus = qualityScore > 75 ? "Excellent" : "Good";
+                const qualityStatus = qualityScore > 75 ? "Excellent" : (qualityScore > 50 ? "Good" : "Poor");
                 collectorQualityData = { score: qualityScore, status: qualityStatus };
                 qualityDiv.textContent = `AI analysis complete! Quality Score: ${qualityScore}/100. Status: ${qualityStatus}`;
-                qualityDiv.className = `status-message ${qualityScore > 75 ? 'success' : 'warning'}`;
+                qualityDiv.className = `status-message ${qualityStatus === 'Excellent' ? 'success' : (qualityStatus === 'Good' ? 'warning' : 'error')}`;
             }, 2000); 
         });
 
@@ -1001,10 +1026,23 @@
 
             setTimeout(() => {
                 const qualityScore = simpleHash(supplierImage);
-                const qualityStatus = qualityScore > 75 ? "Excellent" : "Good";
+                let qualityStatus;
+                let statusClass;
+
+                if (qualityScore < 70) {
+                    qualityStatus = "Initial Check Failed!";
+                    statusClass = "error";
+                } else if (qualityScore >= 90) {
+                    qualityStatus = "Excellent";
+                    statusClass = "success";
+                } else {
+                    qualityStatus = "Passed";
+                    statusClass = "warning";
+                }
+                
                 supplierQualityData = { score: qualityScore, status: qualityStatus };
                 qualityDiv.textContent = `AI analysis complete! Quality Score: ${qualityScore}/100. Status: ${qualityStatus}`;
-                qualityDiv.className = `status-message ${qualityScore > 75 ? 'success' : 'warning'}`;
+                qualityDiv.className = `status-message ${statusClass}`;
             }, 2000); 
         });
 
@@ -1022,10 +1060,23 @@
 
             setTimeout(() => {
                 const qualityScore = simpleHash(manufacturerImage);
-                const qualityStatus = qualityScore > 75 ? "Excellent" : "Good";
+                let qualityStatus;
+                let statusClass;
+
+                if (qualityScore < 60) {
+                    qualityStatus = "Initial Check Failed!";
+                    statusClass = "error";
+                } else if (qualityScore >= 80) {
+                    qualityStatus = "Excellent";
+                    statusClass = "success";
+                } else {
+                    qualityStatus = "Passed";
+                    statusClass = "warning";
+                }
+                
                 manufacturerQualityData = { score: qualityScore, status: qualityStatus };
                 qualityDiv.textContent = `AI analysis complete! Quality Score: ${qualityScore}/100. Status: ${qualityStatus}`;
-                qualityDiv.className = `status-message ${qualityScore > 75 ? 'success' : 'warning'}`;
+                qualityDiv.className = `status-message ${statusClass}`;
             }, 2000);
         });
 
