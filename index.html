@@ -11,7 +11,6 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-
     <style>
         /* ===================================================================
            CSS STYLES
@@ -19,15 +18,15 @@
 
         /* CSS Variables for a clean, colorful, and maintainable palette */
         :root {
-            --primary-color: #387D43;    /* A rich, deep green */
-            --secondary-color: #F8B400;  /* A warm amber */
+            --primary-color: #212a2e;    /* A rich, deep green */
+            --secondary-color: #ffaaaa;  /* A warm amber */
             --accent-color: #6A7B8E;     /* A calm, muted gray */
             --text-dark: #2C3639;        /* Dark charcoal */
             --text-light: #fff;          /* White */
-            --background-start: #f1be4e; /* Pale green start for gradient */
-            --background-end: #a1ffb7;   /* Light green end for gradient */
-            --card-bg: #f1f3ea;             /* Card background */
-            --shadow-color: rgba(0, 0, 0, 0.15);
+            --background-start: #f7ce47; /* Pale green start for gradient */
+            --background-end: #56fc7d;   /* Light green end for gradient */
+            --card-bg: #f7fce6;          /* Card background */
+            --shadow-color: rgba(136, 120, 120, 0.15);
             --border-color: #C8E6C9;     /* Very light green */
             --success-light: #DCF8E1;
             --success-dark: #2E7D32;
@@ -35,6 +34,25 @@
             --error-dark: #C62828;
             --warning-light: #FFF9C4;
             --warning-dark: #FF8F00;
+        }
+
+        :root.dark-mode {
+            --primary-color: #A3D4D1;
+            --secondary-color: #F7D794;
+            --accent-color: #99AAB5;
+            --text-dark: #EAEAEA;
+            --text-light: #1A1A1A;
+            --background-start: #1A2830;
+            --background-end: #2C3E50;
+            --card-bg: #2B3748;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --border-color: #3C4E61;
+            --success-light: #1F4538;
+            --success-dark: #90EE90;
+            --error-light: #5C2A2A;
+            --error-dark: #FF5A5F;
+            --warning-light: #4A4A2C;
+            --warning-dark: #FFD700;
         }
 
         /* General Body and Main Container Styles */
@@ -47,6 +65,7 @@
             padding: 2rem;
             animation: fadeIn 1.5s ease-in-out;
             min-height: 100vh;
+            transition: background-color 0.5s ease, color 0.5s ease;
         }
 
         .container {
@@ -56,34 +75,57 @@
             padding: 3rem;
             border-radius: 1.5rem;
             box-shadow: 0 25px 50px var(--shadow-color);
-            transition: transform 0.3s ease-in-out;
+            transition: transform 0.3s ease-in-out, background 0.5s ease;
             border: 1px solid var(--border-color);
         }
         
         /* Top image styling */
-        .header-image-top {
-            text-align: center;
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
             margin-bottom: 2rem;
         }
         
-        .header-image-top img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 1rem;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        .header-top .logo-img {
+            height: 10rem;
+            transform: translateX(1px);
         }
 
-        /* Second image styling */
-        .header-image-bottom {
-            text-align: center;
-            margin-bottom: 2rem;
+        .header-top .ayush-logo {
+            height: 8rem;
+            transform: translateX(10px);
+        }
+        
+        .header-top .herb-img {
+            height: 10rem;
+            transform: translateX(-1px);
+        }
+        
+        .theme-toggle-btn, .lang-toggle-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px var(--shadow-color);
         }
 
-        .header-image-bottom img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 1rem;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        .theme-toggle-btn:hover, .lang-toggle-btn:hover {
+            background: var(--border-color);
+            transform: scale(1.1);
+        }
+        
+        .toggle-group {
+            display: flex;
+            gap: 1rem;
         }
 
         /* Typography */
@@ -426,17 +468,26 @@
             .form-group-flex .btn {
                 margin-top: 1rem;
             }
+            .header-top {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .header-top .ayush-logo {
+                height: 6rem;
+            }
         }
     </style>
 </head>
 <body class="min-h-screen">
 
     <div class="container">
-        <div class="header-image-top">
-            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRAkPgz6hbe5TiPLYOkLs0o8sP6sxEbYP7CQQ&s" alt="HerbalChain Logo">
-        </div>
-        <div class="header-image-bottom">
-            <img src="https://i.imgur.com/kS94b2r.jpeg" alt="Herbal products banner">
+        <div class="header-top">
+            <img src="https://png.pngtree.com/png-clipart/20230807/original/pngtree-vector-logo-blockchain-network-symbol-currency-vector-picture-image_10132819.png" alt="HerbalChain Logo" class="logo-img">
+            <img src="https://ayush.gov.in/resources/img/ministry-of-ayush-logo.png" alt="Ministry of Ayush Logo" class="ayush-logo">
+            <div class="toggle-group">
+                <button id="language-toggle" class="lang-toggle-btn">🌐</button>
+                <button id="theme-toggle" class="theme-toggle-btn">🌙</button>
+            </div>
         </div>
         <h1 class="title">HerbalChain Traceability</h1>
         <p class="description">Track the journey of herbs from farm to medicine cabinet.</p>
@@ -518,8 +569,8 @@
                     <input type="text" id="used-herb-ids" placeholder="Example: HERB-1698205632313, HERB-1698205632314" required>
                 </div>
                 <div>
-                    <label for="manufacturer-weight">Final Weight (Kg):</label>
-                    <input type="number" id="manufacturer-weight" placeholder="98.5" required>
+                    <label for="manufacturer-weight">Units:</label>
+                    <input type="number" id="manufacturer-weight" placeholder="98" required>
                 </div>
                 <div>
                     <label for="manufacturer-image">Final Herb Image (URL):</label>
@@ -756,6 +807,11 @@
                 document.getElementById(contentId).classList.add('active');
             }
             updateLedger();
+            // Check for saved theme preference
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark-mode');
+            }
         });
 
         tabs.forEach(button => {
@@ -1227,6 +1283,20 @@
 
             doc.save('HerbalChain_Ledger.pdf');
         });
+
+        // Theme Toggle Logic
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            const body = document.documentElement;
+            body.classList.toggle('dark-mode');
+            const isDarkMode = body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+        });
+
+        // Language Toggle Logic (Placeholder)
+        document.getElementById('language-toggle').addEventListener('click', () => {
+            alert('Language selection feature coming soon!');
+        });
+
 
         document.getElementById('capture-location-btn').addEventListener('click', getGeoLocation);
         startScanBtn.addEventListener('click', startScanner);
