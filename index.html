@@ -730,9 +730,9 @@
                     return { success: false, message: 'This herb cannot be transferred.' };
                 }
                 
-                const collectorQuality = herb.quality;
-                if (!collectorQuality || !supplierQuality || collectorQuality.score !== supplierQuality.score) {
-                    return { success: false, message: `QUALITY MISMATCH! Collector score: ${collectorQuality?.score || 'N/A'}, Supplier score: ${supplierQuality?.score || 'N/A'}. Transfer blocked.` };
+                // New logic: Check if supplier's quality score is below 70
+                if (supplierQuality.score < 70) {
+                    return { success: false, message: `QUALITY BLOCKED! Supplier's score is too low: ${supplierQuality.score}/100. Transfer denied.` };
                 }
 
                 const recordedQuantity = herb.quantity;
@@ -756,6 +756,11 @@
             }
             
             useHerbInMedicine(batchID, manufacturerID, herbIDs, finalWeight, manufacturerQuality) {
+                // New logic: Check if manufacturer's quality score is below 60
+                if (manufacturerQuality.score < 60) {
+                    return { success: false, message: `QUALITY BLOCKED! Manufacturer's score is too low: ${manufacturerQuality.score}/100. Production denied.` };
+                }
+
                 const invalidHerbs = [];
                 let totalTransferWeight = 0;
                 
@@ -769,10 +774,6 @@
 
                         if (!transferBlock) {
                             return { success: false, message: `No transfer record found for herb ${id}.` };
-                        }
-
-                        if (transferBlock.supplierQuality.score !== manufacturerQuality.score) {
-                             return { success: false, message: `Quality mismatch for herb ${id}. Production blocked.` };
                         }
                         
                         totalTransferWeight += parseFloat(transferBlock.weight);
@@ -883,11 +884,12 @@
                 if (data.type === 'transferHerb' && data.herbID) {
                     const herbMetadata = herbChain.metadata[data.herbID];
                     
-                    if (herbMetadata.quality && data.supplierQuality) {
-                        if (herbMetadata.quality.score === data.supplierQuality.score) {
-                            qualityMatchStatus = '✅ Matched';
+                    // Check if supplier's quality score met the threshold
+                    if (data.supplierQuality) {
+                        if (data.supplierQuality.score >= 70) {
+                            qualityMatchStatus = '✅ Passed (>=70)';
                         } else {
-                            qualityMatchStatus = `🚨 Mismatch (${herbMetadata.quality.score} vs ${data.supplierQuality.score})`;
+                            qualityMatchStatus = `🚨 Failed (<70)`;
                         }
                     }
 
@@ -902,6 +904,37 @@
                             weightMatchStatus = `🚨 Mismatch (${recordedQuantity} vs ${transferWeight})`;
                         }
                     }
+                } else if (data.type === 'useHerb' && data.batchID) {
+                    // Check if manufacturer's quality score met the threshold
+                    if (data.manufacturerQuality) {
+                        if (data.manufacturerQuality.score >= 60) {
+                            qualityMatchStatus = '✅ Passed (>=60)';
+                        } else {
+                            qualityMatchStatus = `🚨 Failed (<60)`;
+                        }
+                    }
+                    const usedHerbs = data.herbIDs;
+                    let totalWeightUsed = 0;
+                    usedHerbs.forEach(herbId => {
+                        const herb = herbChain.metadata[herbId];
+                        if (herb) {
+                            const transferBlock = herb.history.find(h => h.type === 'transferHerb');
+                            if (transferBlock) {
+                                totalWeightUsed += parseFloat(transferBlock.weight);
+                            }
+                        }
+                    });
+                    
+                    const finalWeight = parseFloat(data.finalWeight);
+                    const tolerancePercentage = 0.05;
+                    const difference = Math.abs(totalWeightUsed - finalWeight);
+
+                    if (difference <= totalWeightUsed * tolerancePercentage) {
+                        weightMatchStatus = '✅ Matched';
+                    } else {
+                        weightMatchStatus = `🚨 Mismatch (${totalWeightUsed} vs ${finalWeight})`;
+                    }
+
                 }
                 
                 let formattedData = '';
@@ -1264,11 +1297,11 @@
 
                 if (data.type === 'transferHerb' && data.herbID) {
                     const herbMetadata = herbChain.metadata[data.herbID];
-                    if (herbMetadata.quality && data.supplierQuality) {
-                        if (herbMetadata.quality.score === data.supplierQuality.score) {
-                            qualityMatchStatus = 'Matched';
+                    if (data.supplierQuality) {
+                        if (data.supplierQuality.score >= 70) {
+                            qualityMatchStatus = 'Passed (>=70)';
                         } else {
-                            qualityMatchStatus = `Mismatch (${herbMetadata.quality.score} vs ${data.supplierQuality.score})`;
+                            qualityMatchStatus = `Failed (<70)`;
                         }
                     }
                     if (herbMetadata.quantity) {
@@ -1281,6 +1314,35 @@
                         } else {
                             weightMatchStatus = `Mismatch (${recordedQuantity} vs ${transferWeight})`;
                         }
+                    }
+                } else if (data.type === 'useHerb' && data.batchID) {
+                    if (data.manufacturerQuality) {
+                        if (data.manufacturerQuality.score >= 60) {
+                            qualityMatchStatus = 'Passed (>=60)';
+                        } else {
+                            qualityMatchStatus = `Failed (<60)`;
+                        }
+                    }
+                    const usedHerbs = data.herbIDs;
+                    let totalWeightUsed = 0;
+                    usedHerbs.forEach(herbId => {
+                        const herb = herbChain.metadata[herbId];
+                        if (herb) {
+                            const transferBlock = herb.history.find(h => h.type === 'transferHerb');
+                            if (transferBlock) {
+                                totalWeightUsed += parseFloat(transferBlock.weight);
+                            }
+                        }
+                    });
+
+                    const finalWeight = parseFloat(data.finalWeight);
+                    const tolerancePercentage = 0.05;
+                    const difference = Math.abs(totalWeightUsed - finalWeight);
+
+                    if (difference <= totalWeightUsed * tolerancePercentage) {
+                        weightMatchStatus = 'Matched';
+                    } else {
+                        weightMatchStatus = `Mismatch (${totalWeightUsed} vs ${finalWeight})`;
                     }
                 }
                 
