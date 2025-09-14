@@ -278,6 +278,15 @@ input:focus, select:focus {
     box-shadow: 0 6px 10px rgba(0,0,0,0.3);
 }
 
+.btn.btn-danger {
+    background-color: var(--error-dark);
+}
+
+.btn.btn-danger:hover {
+    background-color: #a52323;
+}
+
+
 .btn.disabled {
     background-color: #ccc;
     cursor: not-allowed;
@@ -330,7 +339,6 @@ input:focus, select:focus {
     gap: 20px;
 }
 
-/* NEW STYLES FOR QR CODE ITEMS */
 .qr-code-item {
     display: flex;
     flex-direction: column;
@@ -387,9 +395,8 @@ input:focus, select:focus {
 }
 
 /* Blockchain Ledger */
-.ledger-section {
+.ledger-section, .reputation-section {
     margin-top: 3rem;
-    text-align: center;
 }
 
 .ledger-table-container {
@@ -434,15 +441,6 @@ input:focus, select:focus {
     border-bottom: none;
 }
 
-/* New styles for collapsible data */
-.ledger-data-wrapper {
-    max-height: 25px;
-    overflow: hidden;
-    transition: max-height 0.3s ease;
-}
-.ledger-data-wrapper.expanded {
-    max-height: 500px;
-}
 .data-summary {
     cursor: pointer;
     font-weight: bold;
@@ -453,29 +451,13 @@ input:focus, select:focus {
 .data-summary:hover {
     color: var(--secondary-color);
 }
-.data-pre {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    font-size: 0.85rem;
-    font-family: 'Lato', sans-serif;
-}
-.download-btn {
-    margin-top: 2rem;
-    background-color: #007bff;
-    color: white;
-    border-radius: 0.75rem;
-    padding: 1rem 2.5rem;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    border: none;
-    transition: background 0.3s ease, transform 0.3s ease;
-    text-transform: uppercase;
-}
 
-.download-btn:hover {
-    background-color: #0056b3;
-    transform: translateY(-3px);
+.ledger-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
 
 /* Utility classes for layout */
@@ -527,18 +509,62 @@ input:focus, select:focus {
     background-color: var(--card-bg);
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
 }
-#camera-preview {
-    width: 100%;
-    max-width: 400px;
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-}
 .camera-buttons {
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
     justify-content: center;
 }
+
+/* Reputation System Styles */
+.reputation-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    background: var(--card-bg);
+    padding: 2rem;
+    border-radius: 1.5rem;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color);
+}
+
+.reputation-card {
+    background: linear-gradient(145deg, var(--card-bg), #ffffff);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    text-align: center;
+    box-shadow: 0 8px 15px var(--shadow-color);
+    border: 1px solid var(--border-color);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dark-mode .reputation-card {
+     background: linear-gradient(145deg, var(--card-bg), #3a4b60);
+}
+
+.reputation-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 20px var(--shadow-color);
+}
+
+.reputation-card .participant-name {
+    display: block;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.reputation-card .participant-score {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--success-dark);
+}
+
+.reputation-card .participant-score.low-score {
+    color: var(--error-dark);
+}
+
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
@@ -583,6 +609,9 @@ input:focus, select:focus {
         padding: 0.75rem;
         font-size: 0.8rem;
     }
+    .reputation-grid {
+        padding: 1.5rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -595,4 +624,28 @@ input:focus, select:focus {
     }
     .header-top .logo-img { height: 6rem; }
     .header-top .ayush-logo { height: 4.5rem; }
+}
+
+/* ===================================================================
+    NEW STYLES ADDED FOR FRAUD PREVENTION
+   =================================================================== */
+
+/* Styles for QR Code Scan Warning */
+.qr-scan-warning {
+    padding: 1.5rem;
+    border: 2px solid var(--error-dark);
+    background-color: var(--error-light);
+    color: var(--error-dark);
+    border-radius: 1rem;
+    text-align: center;
+}
+
+.qr-scan-warning strong {
+    font-size: 1.2rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.qr-scan-warning p {
+    margin: 0;
 }
