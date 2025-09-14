@@ -12,7 +12,6 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="min-h-screen">
@@ -46,7 +45,7 @@
                 <div>
                     <label for="collector-location">Collector Location:</label>
                     <div class="form-group-flex">
-                        <input type="text" id="collector-location" placeholder="Example: Lat: 26.7677, Lon: 75.8480" required>
+                        <input type="text" id="collector-location" placeholder="e.g., Village, District, State - Pincode" required>
                         <button id="capture-collector-location-btn" class="btn" style="white-space: nowrap; font-size: 0.9rem;">Auto-Capture</button>
                     </div>
                 </div>
@@ -79,22 +78,49 @@
         </div>
 
         <div id="supplier" class="tab-content">
-            <h2>Transfer Herb</h2>
+             <h2>Verify Received Herb Batch</h2>
             <div class="form-section">
                 <div>
-                    <label for="transfer-herb-id">Herb ID:</label>
+                    <label for="verify-herb-id">Select Unverified Batch:</label>
+                    <select id="verify-herb-id" required>
+                        <option value="">No unverified batches found...</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="measured-quantity">Measured Quantity:</label>
+                    <div class="unit-input-group">
+                        <input type="number" id="measured-quantity" placeholder="Enter actual received quantity" required>
+                        <select id="measured-unit-select" disabled>
+                            <option value="Kg">Kg</option>
+                            <option value="Gram">Gram</option>
+                            <option value="Pieces">Pieces</option>
+                            <option value="Bundles">Bundles</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="verify-receipt-btn" class="btn">Verify & Confirm Receipt</button>
+            </div>
+            <div id="verify-status" class="status-message"></div>
+            
+            <hr style="margin: 2rem 0;">
+
+            <h2>Transfer Verified Herb</h2>
+            <div class="form-section">
+                <div>
+                    <label for="transfer-herb-id">Select Verified Herb:</label>
                     <select id="transfer-herb-id" required>
-                        <option value="">Select a collected herb...</option>
+                        <option value="">Select a verified herb...</option>
                     </select>
                 </div>
                 <div>
                     <label for="transfer-to">Transfer To (ID):</label>
                     <select id="transfer-to" required>
                         <option value="">Select Manufacturer</option>
-                        <option value="MANU-001">Pinak Dave</option>
+                        <option value="MANU-001">Dabur India Limited</option>
                     </select>
                 </div>
-                 <div>
+                
+                <div>
                     <label for="supplier-location">Supplier Location:</label>
                     <div class="form-group-flex">
                         <input type="text" id="supplier-location" placeholder="e.g., Supplier Warehouse, Delhi" required>
@@ -102,10 +128,10 @@
                     </div>
                 </div>
                 <div>
-                    <label for="supplier-weight">Units:</label>
-                     <div class="unit-input-group">
+                    <label for="supplier-weight">Units to Transfer:</label>
+                    <div class="unit-input-group">
                         <input type="number" id="supplier-weight" placeholder="98" required>
-                        <select id="supplier-unit-select">
+                        <select id="supplier-unit-select" disabled>
                             <option value="Kg">Kg</option>
                             <option value="Gram">Gram</option>
                             <option value="Pieces">Pieces</option>
@@ -144,19 +170,16 @@
                         <button id="capture-manufacturer-location-btn" class="btn" style="white-space: nowrap; font-size: 0.9rem;">Auto-Capture</button>
                     </div>
                 </div>
-
                 <div id="multi-batch-container">
                     <label>Used Herb Batches:</label>
-                    <div id="multi-batch-inputs" class="multi-batch-input-container">
-                        </div>
+                    <div id="multi-batch-inputs" class="multi-batch-input-container"></div>
                     <button id="add-batch-btn" class="btn" style="width: auto; margin-top: 1rem;">Add Herb Batch</button>
                 </div>
-
                 <div>
                     <label for="final-medicine-units">Final Medicine Units:</label>
                     <div class="unit-input-group">
                         <input type="number" id="final-medicine-units" placeholder="Units Produced" required>
-                         <select id="final-medicine-unit-select">
+                        <select id="final-medicine-unit-select">
                             <option value="Kg">Kg</option>
                             <option value="Gram">Gram</option>
                             <option value="Pieces">Pieces</option>
@@ -188,16 +211,22 @@
         <div id="consumer" class="tab-content">
             <h2>Scan QR Code</h2>
             <div class="form-section">
+                <div id="reader" style="width: 100%; max-width: 400px; margin: auto; border-radius: 10px; overflow: hidden;"></div>
+                <div class="camera-buttons">
+                    <button id="start-scan-btn" class="btn">Start Camera Scan</button>
+                    <button id="stop-scan-btn" class="btn" style="display: none;">Stop Camera</button>
+                </div>
+                <p style="text-align: center; margin: 1rem 0; font-weight: bold;">OR</p>
                 <div>
                     <label for="qr-image-input">Upload QR Code Image to Trace:</label>
                     <input type="file" id="qr-image-input" accept="image/*">
                 </div>
+                <div id="file-scanner-container" style="display: none;"></div>
             </div>
             <div id="trace-result" class="hidden">
                 <h3 class="title">Trace Result</h3>
                 <div id="trace-content"></div>
             </div>
-            <div id="file-scanner-container" style="display: none;"></div>
         </div>
 
         <div class="ledger-section">
@@ -210,7 +239,7 @@
                             <th>Previous Hash</th>
                             <th>Current Hash</th>
                             <th>Data</th>
-                            <th>Weight Match</th>
+                            <th>Fraud Alert</th>
                             <th>Quality Match</th>
                         </tr>
                     </thead>
@@ -219,7 +248,10 @@
                     </tbody>
                 </table>
             </div>
-            <button id="download-pdf-btn" class="download-btn">Download Blockchain Ledger (PDF)</button>
+            <div class="ledger-actions">
+                <button id="download-pdf-btn" class="btn">Download Ledger (PDF)</button>
+                <button id="clear-data-btn" class="btn btn-danger">Clear All Data</button>
+            </div>
         </div>
     </div>
 
