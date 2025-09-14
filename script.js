@@ -3,7 +3,7 @@ JAVASCRIPT LOGIC
 =================================================================== */
 
 //---------------------------------------------------------
-// Simulation of Blockchain and Smart Contracts
+// Blockchain and Smart Contracts Simulation
 //---------------------------------------------------------
 class Block {
     constructor(timestamp, data, previousHash = '') {
@@ -21,14 +21,33 @@ class Block {
 
 class Blockchain {
     constructor() {
-        this.chain = [this.createGenesisBlock()];
-        this.metadata = {}; // Master record of all herbs created
-        this.inventories = { // Actor-specific inventories
-            'SUPPLIER-001': {},
-            'MANU-001': {}
-        };
+        // Attempt to load from localStorage, otherwise create a new chain
+        const savedData = localStorage.getItem('herbalChainData');
+        if (savedData) {
+            const parsedData = JSON.parse(savedData);
+            this.chain = parsedData.chain;
+            this.metadata = parsedData.metadata;
+            this.inventories = parsedData.inventories;
+            this.reputationScores = parsedData.reputationScores || this.getInitialReputation();
+        } else {
+            this.chain = [this.createGenesisBlock()];
+            this.metadata = {}; 
+            this.inventories = { 
+                'SUPPLIER-001': {},
+                'MANU-001': {}
+            };
+            this.reputationScores = this.getInitialReputation();
+        }
     }
 
+    getInitialReputation() {
+        return {
+            'COLLECTOR-001': 100,
+            'SUPPLIER-001': 100,
+            'MANU-001': 100
+        };
+    }
+    
     createGenesisBlock() {
         return new Block('2025-01-01', 'Genesis Block', '0');
     }
@@ -48,33 +67,91 @@ class Blockchain {
         if (this.metadata[herbID]) {
             return { success: false, message: 'This herb ID already exists.' };
         }
-        const data = { type: 'registerHerb', collectorID, herbID, name, location, quantity, unitType, quality, timestamp: Date.now() };
+        const data = { 
+            type: 'registerHerb', 
+            collectorID, 
+            herbID, 
+            name, 
+            location, 
+            quantity: parseFloat(quantity), 
+            unitType, 
+            quality, 
+            timestamp: Date.now(),
+            status: 'pending_verification' // NEW: Set status to pending
+        };
         this.addBlock(new Block(data.timestamp, data));
         
-        this.metadata[herbID] = { name, location, quality, history: [data] };
+        this.metadata[herbID] = { name, location, quality, history: [data], status: 'pending_verification' };
         
-        this.inventories['SUPPLIER-001'][herbID] = {
-            name,
-            quantity: parseFloat(quantity),
-            unitType
-        };
+        return { success: true, message: `Herb ID ${herbID} recorded and is pending verification by supplier.` };
+    }
 
-        return { success: true, message: `Herb ID ${herbID} successfully recorded.` };
+    verifyHerbReceipt(supplierID, herbID, measuredQuantity) {
+        const masterHerb = this.metadata[herbID];
+        if (!masterHerb || masterHerb.status !== 'pending_verification') {
+            return { success: false, message: 'This herb batch is not awaiting verification.' };
+        }
+
+        const registrationBlockData = masterHerb.history[0];
+        const claimedQuantity = registrationBlockData.quantity;
+        const collectorID = registrationBlockData.collectorID;
+        const tolerance = claimedQuantity * 0.02; // 2% tolerance for natural weight loss
+        const difference = Math.abs(claimedQuantity - measuredQuantity);
+
+        if (difference > tolerance) {
+            // FRAUD ALERT
+            masterHerb.status = 'disputed';
+            registrationBlockData.status = 'disputed';
+            this.reputationScores[collectorID] = (this.reputationScores[collectorID] || 100) - 10; // Penalize
+            const data = {
+                type: 'fraudAlert',
+                herbID,
+                claimedQuantity,
+                measuredQuantity,
+                timestamp: Date.now(),
+                message: `Discrepancy found! Claimed: ${claimedQuantity}, Measured: ${measuredQuantity}.`
+            };
+            this.addBlock(new Block(data.timestamp, data));
+            masterHerb.history.push(data);
+            return { success: false, message: `FRAUD ALERT: Weight discrepancy is too high for Herb ID ${herbID}. Batch is now disputed.` };
+        } else {
+            // VERIFICATION SUCCESSFUL
+            masterHerb.status = 'verified';
+            registrationBlockData.status = 'verified';
+            this.reputationScores[collectorID] = (this.reputationScores[collectorID] || 100) + 1; // Reward
+
+            const data = {
+                type: 'verifyReceipt',
+                supplierID,
+                herbID,
+                verifiedQuantity: parseFloat(measuredQuantity),
+                timestamp: Date.now()
+            };
+            this.addBlock(new Block(data.timestamp, data));
+            masterHerb.history.push(data);
+            
+            this.inventories[supplierID][herbID] = {
+                name: masterHerb.name,
+                quantity: parseFloat(measuredQuantity),
+                unitType: registrationBlockData.unitType
+            };
+            return { success: true, message: `Batch ${herbID} verified successfully with quantity ${measuredQuantity}.` };
+        }
     }
 
     transferHerb(fromID, toID, herbID, weight, location, unitType, supplierQuality) {
-        const masterHerb = this.metadata[herbID];
-        if (!masterHerb) {
-            return { success: false, message: 'Herb ID does not exist in master record.' };
-        }
-
         const supplierInventory = this.inventories[fromID];
         const supplierHerb = supplierInventory ? supplierInventory[herbID] : undefined;
 
         if (!supplierHerb) {
-            return { success: false, message: `Herb ID ${herbID} not found in supplier's inventory.` };
+            return { success: false, message: `Herb ID ${herbID} not found in supplier's verified inventory.` };
         }
         
+        const masterHerb = this.metadata[herbID];
+        if (masterHerb.status !== 'verified') {
+            return { success: false, message: `Cannot transfer a disputed or unverified batch.` };
+        }
+
         if (supplierHerb.unitType !== unitType) {
             return { success: false, message: `Unit mismatch. Expected ${supplierHerb.unitType} but got ${unitType}.`};
         }
@@ -85,36 +162,16 @@ class Blockchain {
         if (transferWeight > availableQuantity) {
             return { success: false, message: `Insufficient units. Available: ${availableQuantity.toFixed(2)} ${supplierHerb.unitType}, Requested: ${transferWeight.toFixed(2)} ${unitType}.` };
         }
-
-        if (supplierQuality.score < 70) {
-            return { success: false, message: `QUALITY BLOCKED! Supplier's score is too low: ${supplierQuality.score}/100. Transfer denied.` };
-        }
-
+        
         supplierHerb.quantity -= transferWeight;
         
-        if (!this.inventories[toID]) {
-            this.inventories[toID] = {};
-        }
+        if (!this.inventories[toID]) this.inventories[toID] = {};
         if (!this.inventories[toID][herbID]) {
-            this.inventories[toID][herbID] = {
-                name: masterHerb.name,
-                quantity: 0,
-                unitType: supplierHerb.unitType
-            };
+            this.inventories[toID][herbID] = { name: masterHerb.name, quantity: 0, unitType: supplierHerb.unitType };
         }
         this.inventories[toID][herbID].quantity += transferWeight;
 
-        const data = {
-            type: 'transferHerb',
-            fromID,
-            toID,
-            herbID,
-            weight: transferWeight,
-            unitType,
-            location,
-            supplierQuality,
-            timestamp: Date.now()
-        };
+        const data = { type: 'transferHerb', fromID, toID, herbID, weight: transferWeight, unitType, location, supplierQuality, timestamp: Date.now() };
         this.addBlock(new Block(data.timestamp, data));
         masterHerb.history.push(data);
         
@@ -168,9 +225,30 @@ class Blockchain {
 }
 
 //---------------------------------------------------------
+// Data Persistence Functions
+//---------------------------------------------------------
+function saveData() {
+    const dataToSave = {
+        chain: herbChain.chain,
+        metadata: herbChain.metadata,
+        inventories: herbChain.inventories,
+        reputationScores: herbChain.reputationScores
+    };
+    localStorage.setItem('herbalChainData', JSON.stringify(dataToSave));
+}
+
+function clearData() {
+    if (confirm("Are you sure you want to clear all blockchain data? This action cannot be undone.")) {
+        localStorage.removeItem('herbalChainData');
+        location.reload();
+    }
+}
+
+//---------------------------------------------------------
 // DOM ELEMENTS AND EVENT LISTENERS
 //---------------------------------------------------------
-const herbChain = new Blockchain();
+let herbChain = new Blockchain(); // Initialize blockchain (loads from storage if available)
+
 const tabs = document.querySelectorAll('.tab-button');
 const tabContents = document.querySelectorAll('.tab-content');
 const ledgerBody = document.getElementById('ledger-body');
@@ -178,16 +256,27 @@ const qrcodeDiv = document.getElementById('qrcode');
 const qrTitle = document.getElementById('qr-title');
 const generatedQrCount = document.getElementById('generated-qr-count');
 const downloadPdfBtn = document.getElementById('download-pdf-btn');
+const clearDataBtn = document.getElementById('clear-data-btn');
 const multiBatchInputsContainer = document.getElementById('multi-batch-inputs');
 const addBatchBtn = document.getElementById('add-batch-btn');
+
+// Supplier elements
+const verifyHerbSelect = document.getElementById('verify-herb-id');
+const measuredQuantityInput = document.getElementById('measured-quantity');
+const measuredUnitSelect = document.getElementById('measured-unit-select');
+const verifyReceiptBtn = document.getElementById('verify-receipt-btn');
 const transferHerbSelect = document.getElementById('transfer-herb-id');
 const availableUnitsSupplierSpan = document.getElementById('available-units-supplier');
 
 const MAX_BATCHES = 5;
 
+// Consumer tab elements
 const qrImageInput = document.getElementById('qr-image-input');
 const traceResultDiv = document.getElementById('trace-result');
 const traceContent = document.getElementById('trace-content');
+let html5QrcodeScanner;
+const startScanBtn = document.getElementById('start-scan-btn');
+const stopScanBtn = document.getElementById('stop-scan-btn');
 
 let collectorQualityData = null;
 let supplierQualityData = null;
@@ -200,29 +289,29 @@ let manufacturerStream = null;
 const GOOGLE_MAPS_API_KEY = "YOUR_API_KEY_HERE";
 
 async function fetchAddressFromCoordinates(lat, lon, statusDiv) {
-    if(GOOGLE_MAPS_API_KEY === "YOUR_API_KEY_HERE") {
-        statusDiv.textContent = 'API कुंजी के बिना विस्तृत पता प्राप्त नहीं किया जा सकता।';
+    if (GOOGLE_MAPS_API_KEY === "YOUR_API_KEY_HERE") {
+        statusDiv.textContent = 'API key missing for detailed address lookup.';
         statusDiv.className = 'status-message error';
         return `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
     }
     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${GOOGLE_MAPS_API_KEY}`;
-    statusDiv.textContent = 'पता प्राप्त किया जा रहा है...';
+    statusDiv.textContent = 'Fetching address...';
     statusDiv.className = 'status-message warning';
     try {
         const response = await fetch(url);
         const data = await response.json();
         if (data.status === 'OK' && data.results.length > 0) {
             const address = data.results[0].formatted_address;
-            statusDiv.textContent = 'लोकेशन सफलतापूर्वक पता लगाई गई।';
+            statusDiv.textContent = 'Location captured successfully.';
             statusDiv.className = 'status-message success';
             return address;
         } else {
-            statusDiv.textContent = 'पता नहीं मिला।';
+            statusDiv.textContent = 'Address not found.';
             statusDiv.className = 'status-message warning';
             return `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
         }
     } catch (error) {
-        statusDiv.textContent = `पता प्राप्त करने में त्रुटि: ${error.message}`;
+        statusDiv.textContent = `Error fetching address: ${error.message}`;
         statusDiv.className = 'status-message error';
         console.error("Geocoding API error:", error);
         return `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
@@ -235,15 +324,14 @@ function simpleHash(imageData) {
         hash = ((hash << 5) - hash) + imageData[i];
         hash |= 0;
     }
-    const score = (Math.abs(hash) % 51) + 50;
-    return score;
+    return (Math.abs(hash) % 51) + 50;
 }
 
 function getGeoLocation(role) {
     const locationInput = document.getElementById(`${role}-location`);
     const statusDiv = document.getElementById(`${role}-status`);
     if (navigator.geolocation) {
-        statusDiv.textContent = 'लोकेशन पता लगाई जा रही है...';
+        statusDiv.textContent = 'Requesting location...';
         statusDiv.className = 'status-message warning';
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -255,18 +343,18 @@ function getGeoLocation(role) {
             },
             (error) => {
                 let errorMessage;
-                switch(error.code) {
-                    case error.PERMISSION_DENIED: errorMessage = "उपयोगकर्ता ने लोकेशन की अनुमति नहीं दी।"; break;
-                    case error.POSITION_UNAVAILABLE: errorMessage = "लोकेशन की जानकारी उपलब्ध नहीं है।"; break;
-                    case error.TIMEOUT: errorMessage = "लोकेशन पता लगाने का अनुरोध समय समाप्त हो गया।"; break;
-                    default: errorMessage = "एक अज्ञात त्रुटि हुई।";
+                switch (error.code) {
+                    case error.PERMISSION_DENIED: errorMessage = "User denied the request for Geolocation."; break;
+                    case error.POSITION_UNAVAILABLE: errorMessage = "Location information is unavailable."; break;
+                    case error.TIMEOUT: errorMessage = "The request to get user location timed out."; break;
+                    default: errorMessage = "An unknown error occurred.";
                 }
-                statusDiv.textContent = `त्रुटि: ${errorMessage}`;
+                statusDiv.textContent = `Error: ${errorMessage}`;
                 statusDiv.className = 'status-message error';
             }
         );
     } else {
-        statusDiv.textContent = 'आपके ब्राउज़र में जियोलोकेशन समर्थित नहीं है।';
+        statusDiv.textContent = 'Geolocation is not supported by your browser.';
         statusDiv.className = 'status-message error';
     }
 }
@@ -274,17 +362,17 @@ function getGeoLocation(role) {
 document.addEventListener('DOMContentLoaded', () => {
     const initialTab = document.querySelector('.tab-button.active');
     if (initialTab) {
-        initialTab.classList.add('active');
         const contentId = initialTab.getAttribute('data-tab');
         document.getElementById(contentId).classList.add('active');
     }
-    updateLedger();
-    updateSupplierForm();
-    updateManufacturerForm();
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         document.documentElement.classList.add('dark-mode');
     }
+    // Initial UI update from potentially loaded data
+    updateLedger();
+    updateSupplierForm();
+    updateManufacturerForm();
 });
 
 tabs.forEach(button => {
@@ -296,9 +384,15 @@ tabs.forEach(button => {
         document.getElementById(tab).classList.add('active');
         stopAllCameras();
         
+        // Clear status messages when switching tabs
         document.getElementById('collector-status').innerHTML = '';
         document.getElementById('supplier-status').innerHTML = '';
+        document.getElementById('verify-status').innerHTML = '';
         document.getElementById('manufacturer-status').innerHTML = '';
+
+        if(tab === 'supplier') {
+            updateSupplierForm(); // Refresh supplier lists when tab is clicked
+        }
     });
 });
 
@@ -306,6 +400,9 @@ function stopAllCameras() {
     stopCamera('collector');
     stopCamera('supplier');
     stopCamera('manufacturer');
+    if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+        stopScanner();
+    }
 }
 
 function startCamera(role) {
@@ -406,6 +503,7 @@ function takeSnapshotAndCheck(role) {
     }, 1000);
 }
 
+// ---- Event Listeners for Buttons ----
 document.getElementById('capture-collector-location-btn').addEventListener('click', () => getGeoLocation('collector'));
 document.getElementById('capture-supplier-location-btn').addEventListener('click', () => getGeoLocation('supplier'));
 document.getElementById('capture-manufacturer-location-btn').addEventListener('click', () => getGeoLocation('manufacturer'));
@@ -422,27 +520,49 @@ document.getElementById('start-manufacturer-camera-btn').addEventListener('click
 document.getElementById('check-manufacturer-quality-btn').addEventListener('click', () => takeSnapshotAndCheck('manufacturer'));
 document.getElementById('stop-manufacturer-camera-btn').addEventListener('click', () => stopCamera('manufacturer'));
 
+
 function updateSupplierForm() {
+    // Populate the UNVERIFIED batches dropdown
+    const unverifiedBatches = Object.entries(herbChain.metadata)
+        .filter(([id, data]) => data.status === 'pending_verification');
+    
+    verifyHerbSelect.innerHTML = '<option value="">No unverified batches found...</option>';
+    if (unverifiedBatches.length > 0) {
+        verifyHerbSelect.innerHTML = '<option value="">Select an unverified batch...</option>';
+        unverifiedBatches.forEach(([id, data]) => {
+            const option = document.createElement('option');
+            option.value = id;
+            const regData = data.history[0];
+            option.textContent = `${regData.name} (ID: ${id.substring(5,12)}... Claim: ${regData.quantity} ${regData.unitType})`;
+            verifyHerbSelect.appendChild(option);
+        });
+    }
+
+    // Populate the VERIFIED batches dropdown for transfer
     const supplierInventory = herbChain.inventories['SUPPLIER-001'];
     const availableHerbs = Object.entries(supplierInventory)
-        .filter(([id, data]) => data.quantity > 0);
+        .filter(([id, data]) => data.quantity > 0 && herbChain.metadata[id].status === 'verified');
 
-    const selectElement = document.getElementById('transfer-herb-id');
-    selectElement.innerHTML = '<option value="">Select a collected herb...</option>';
-
+    transferHerbSelect.innerHTML = '<option value="">Select a verified herb...</option>';
     if (availableHerbs.length > 0) {
         availableHerbs.forEach(([id, data]) => {
             const option = document.createElement('option');
             option.value = id;
             option.textContent = `${data.name} (ID: ${id.substring(5, 12)}... - ${data.quantity.toFixed(2)} ${data.unitType})`;
-            selectElement.appendChild(option);
+            transferHerbSelect.appendChild(option);
         });
-    } else {
-        selectElement.innerHTML = '<option value="">No collected herbs available</option>';
     }
     
     availableUnitsSupplierSpan.textContent = '';
 }
+
+verifyHerbSelect.addEventListener('change', (e) => {
+    const selectedHerbId = e.target.value;
+    if (selectedHerbId) {
+        const herbData = herbChain.metadata[selectedHerbId].history[0];
+        measuredUnitSelect.value = herbData.unitType;
+    }
+});
 
 transferHerbSelect.addEventListener('change', (e) => {
     const selectedHerbId = e.target.value;
@@ -455,10 +575,17 @@ transferHerbSelect.addEventListener('change', (e) => {
     }
 });
 
+
 function updateManufacturerForm() {
     const manufacturerInventory = herbChain.inventories['MANU-001'];
     const transferredHerbs = Object.entries(manufacturerInventory)
         .filter(([id, data]) => data.quantity > 0);
+
+    if (transferredHerbs.length === 0) {
+        multiBatchInputsContainer.innerHTML = '<p>No transferred herbs in inventory to use.</p>';
+    } else if (multiBatchInputsContainer.querySelectorAll('.batch-input-group').length === 0) {
+         multiBatchInputsContainer.innerHTML = '';
+    }
 
     if (transferredHerbs.length > 0) {
         addBatchBtn.style.display = 'block';
@@ -494,6 +621,10 @@ addBatchBtn.addEventListener('click', () => {
         alert('No transferred herbs with available quantity to add.');
         return;
     }
+    
+    if (multiBatchInputsContainer.querySelector('p')) {
+        multiBatchInputsContainer.innerHTML = '';
+    }
 
     const newBatchInputGroup = document.createElement('div');
     newBatchInputGroup.className = 'batch-input-group';
@@ -507,7 +638,7 @@ addBatchBtn.addEventListener('click', () => {
             <label>Units Used:</label>
             <div class="unit-input-group">
                 <input type="number" class="units-used-input" placeholder="0" required>
-                <select class="units-used-select">
+                <select class="units-used-select" disabled>
                     <option value="Kg">Kg</option>
                     <option value="Gram">Gram</option>
                     <option value="Pieces">Pieces</option>
@@ -560,8 +691,12 @@ function updateLedger() {
     ledgerBody.innerHTML = '';
     herbChain.chain.slice(1).reverse().forEach((block, index) => {
         const data = block.data;
-        let weightMatchStatus = 'N/A';
+        let fraudAlertStatus = '✅ N/A';
         let qualityMatchStatus = 'N/A';
+        
+        if (data.type === 'fraudAlert') {
+            fraudAlertStatus = `🚨 DISPUTED! Claim: ${data.claimedQuantity}, Measured: ${data.measuredQuantity}`;
+        }
         
         if (data.type === 'transferHerb') {
             if (data.supplierQuality) {
@@ -605,9 +740,13 @@ function updateLedger() {
                     <pre>${formattedData}</pre>
                 </details>
             </td>
-            <td>${weightMatchStatus}</td>
+            <td>${fraudAlertStatus}</td>
             <td>${qualityMatchStatus}</td>
         `;
+        if (data.type === 'fraudAlert') {
+            row.style.backgroundColor = 'var(--error-light)';
+            row.style.color = 'var(--error-dark)';
+        }
         ledgerBody.appendChild(row);
     });
 }
@@ -641,14 +780,41 @@ document.getElementById('add-herb-btn').addEventListener('click', () => {
         document.getElementById('collector-quantity').value = '';
         document.getElementById('collector-quality-result').textContent = '';
         collectorQualityData = null;
+        saveData();
         updateLedger();
         updateSupplierForm();
-        updateManufacturerForm();
     } else {
         statusDiv.textContent = result.message;
         statusDiv.className = 'status-message error';
     }
 });
+
+verifyReceiptBtn.addEventListener('click', () => {
+    const herbID = verifyHerbSelect.value;
+    const measuredQuantity = measuredQuantityInput.value;
+    const statusDiv = document.getElementById('verify-status');
+
+    if (!herbID || !measuredQuantity) {
+        statusDiv.textContent = 'Please select a batch and enter the measured quantity.';
+        statusDiv.className = 'status-message error';
+        return;
+    }
+    
+    const result = herbChain.verifyHerbReceipt('SUPPLIER-001', herbID, measuredQuantity);
+    
+    if (result.success) {
+        statusDiv.textContent = result.message;
+        statusDiv.className = 'status-message success';
+    } else {
+        statusDiv.textContent = result.message;
+        statusDiv.className = 'status-message error';
+    }
+    
+    saveData();
+    updateLedger();
+    updateSupplierForm(); // This will refresh both dropdowns
+});
+
 
 document.getElementById('transfer-herb-btn').addEventListener('click', () => {
     const herbID = document.getElementById('transfer-herb-id').value;
@@ -681,6 +847,7 @@ document.getElementById('transfer-herb-btn').addEventListener('click', () => {
         document.getElementById('supplier-quality-result').textContent = '';
         availableUnitsSupplierSpan.textContent = '';
         supplierQualityData = null;
+        saveData();
     } else {
         statusDiv.textContent = result.message;
         statusDiv.className = 'status-message error';
@@ -791,6 +958,7 @@ document.getElementById('produce-medicine-btn').addEventListener('click', () => 
         document.getElementById('manufacturer-quality-result').textContent = '';
         manufacturerQualityData = null;
 
+        saveData();
         updateLedger();
         updateSupplierForm();
         updateManufacturerForm();
@@ -802,29 +970,47 @@ document.getElementById('produce-medicine-btn').addEventListener('click', () => 
 });
 
 // --- Consumer Tab Logic ---
+function onScanSuccess(decodedText) {
+    console.log(`Live scan result: ${decodedText}`);
+    stopScanner();
+    processQrData(decodedText);
+}
+
+function onScanError(errorMessage) { /* Quietly handle errors */ }
+
+function startScanner() {
+    if (!html5QrcodeScanner || !html5QrcodeScanner.isScanning) {
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+        html5QrcodeScanner.render(onScanSuccess, onScanError);
+        startScanBtn.style.display = 'none';
+        stopScanBtn.style.display = 'inline-block';
+    }
+}
+
+function stopScanner() {
+    if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+        html5QrcodeScanner.clear().catch(error => console.error("Failed to stop scanner:", error));
+    }
+    html5QrcodeScanner = null;
+    startScanBtn.style.display = 'inline-block';
+    stopScanBtn.style.display = 'none';
+}
+
 function handleQrImageUpload(event) {
     const file = event.target.files[0];
-    if (!file) {
-        return;
-    }
-    const html5QrCode = new Html5Qrcode("file-scanner-container");
+    if (!file) return;
     
+    const html5QrCode = new Html5Qrcode("file-scanner-container");
     traceResultDiv.classList.remove('hidden');
     traceContent.innerHTML = '<p>Scanning image...</p>';
 
     html5QrCode.scanFile(file, true)
-        .then(decodedText => {
-            console.log(`File scan success: ${decodedText}`);
-            processQrData(decodedText);
-        })
+        .then(decodedText => processQrData(decodedText))
         .catch(err => {
             console.error(`Error scanning file:`, err);
-            traceResultDiv.classList.remove('hidden');
             traceContent.innerHTML = `<p class="status-message error">Error scanning image: ${err}. Please try a clearer QR code image.</p>`;
         })
-        .finally(() => {
-            qrImageInput.value = ''; 
-        });
+        .finally(() => { qrImageInput.value = ''; });
 }
 
 function processQrData(qrDataString) {
@@ -833,15 +1019,8 @@ function processQrData(qrDataString) {
     try {
         qrData = JSON.parse(qrDataString);
     } catch (e) {
-        console.error("Failed to parse JSON from QR code.", e);
-        console.log("Scanned string that failed to parse:", qrDataString);
-        traceContent.innerHTML = `
-            <p class="status-message error">
-                QR Code was scanned, but the data inside is not in the correct format.
-            </p>
-            <p><strong>Scanned Data:</strong></p>
-            <pre style="white-space: pre-wrap; word-wrap: break-word; text-align: left; background: #eee; color: #333; padding: 10px; border-radius: 5px;">${qrDataString}</pre>
-        `;
+        console.error("Failed to parse JSON from QR code.", e, "Data:", qrDataString);
+        traceContent.innerHTML = `<p class="status-message error">Invalid QR Code Data. Not in the correct JSON format.</p>`;
         return;
     }
 
@@ -870,10 +1049,10 @@ function processQrData(qrDataString) {
                     
                     herbMaster.history.forEach(rec => {
                          html += `<p><strong>Action:</strong> ${rec.type}<br>
-                                  <strong>Timestamp:</strong> ${new Date(rec.timestamp).toLocaleString()}<br>
-                                  <strong>Location:</strong> ${rec.location || 'N/A'}</p>`;
+                                     <strong>Timestamp:</strong> ${new Date(rec.timestamp).toLocaleString()}<br>
+                                     <strong>Location:</strong> ${rec.location || 'N/A'}</p>`;
                     });
-                     html += `</div>`;
+                       html += `</div>`;
                 }
             });
         } else {
@@ -884,7 +1063,6 @@ function processQrData(qrDataString) {
         traceContent.innerHTML = '<p class="status-message error">Invalid QR Code. Not a valid medicine QR code.</p>';
     }
 }
-
 
 // PDF Download Function
 downloadPdfBtn.addEventListener('click', () => {
@@ -897,7 +1075,7 @@ downloadPdfBtn.addEventListener('click', () => {
     doc.text(`Report Generated: ${new Date().toLocaleString()}`, 10, 22);
 
     const tableData = [];
-    const headers = ['Block ID', 'Previous Hash', 'Current Hash', 'Data', 'Weight Match', 'Quality Match'];
+    const headers = ['Block ID', 'Previous Hash', 'Current Hash', 'Data', 'Fraud Alert', 'Quality Match'];
 
     herbChain.chain.slice(1).reverse().forEach((block, index) => {
         const data = block.data;
@@ -918,9 +1096,12 @@ downloadPdfBtn.addEventListener('click', () => {
             return `${key}: ${formattedValue}`;
         }).join('\n');
 
-        let weightMatchStatus = 'N/A';
+        let fraudAlertStatus = '✅ N/A';
         let qualityMatchStatus = 'N/A';
 
+        if (data.type === 'fraudAlert') {
+             fraudAlertStatus = `🚨 DISPUTED! Claim: ${data.claimedQuantity}, Measured: ${data.measuredQuantity}`;
+        }
         if (data.type === 'transferHerb' && data.herbID) {
             if (data.supplierQuality) {
                 qualityMatchStatus = data.supplierQuality.score >= 70 ? 'Passed (>=70)' : `Failed (<70)`;
@@ -936,7 +1117,7 @@ downloadPdfBtn.addEventListener('click', () => {
             block.previousHash.substring(0, 10) + '...',
             block.hash.substring(0, 10) + '...',
             formattedData,
-            weightMatchStatus,
+            fraudAlertStatus,
             qualityMatchStatus
         ]);
     });
@@ -946,9 +1127,7 @@ downloadPdfBtn.addEventListener('click', () => {
         head: [headers],
         body: tableData,
         theme: 'striped',
-        styles: {
-            fontSize: 8, cellPadding: 2, valign: 'middle', overflow: 'linebreak', cellWidth: 'wrap'
-        },
+        styles: { fontSize: 8, cellPadding: 2, valign: 'middle', overflow: 'linebreak', cellWidth: 'wrap' },
         columnStyles: {
             0: { cellWidth: 15 }, 1: { cellWidth: 20 }, 2: { cellWidth: 20 },
             3: { cellWidth: 85 }, 4: { cellWidth: 25 }, 5: { cellWidth: 25 }
@@ -960,9 +1139,8 @@ downloadPdfBtn.addEventListener('click', () => {
 
 // Theme Toggle Logic
 document.getElementById('theme-toggle').addEventListener('click', () => {
-    const body = document.documentElement;
-    body.classList.toggle('dark-mode');
-    const isDarkMode = body.classList.contains('dark-mode');
+    document.documentElement.classList.toggle('dark-mode');
+    const isDarkMode = document.documentElement.classList.contains('dark-mode');
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
 });
 
@@ -971,8 +1149,12 @@ document.getElementById('language-toggle').addEventListener('click', () => {
     alert('Language selection feature coming soon!');
 });
 
+// --- Final Event Listeners ---
 document.getElementById('capture-collector-location-btn').addEventListener('click', () => getGeoLocation('collector'));
 document.getElementById('capture-supplier-location-btn').addEventListener('click', () => getGeoLocation('supplier'));
 document.getElementById('capture-manufacturer-location-btn').addEventListener('click', () => getGeoLocation('manufacturer'));
 
 qrImageInput.addEventListener('change', handleQrImageUpload);
+startScanBtn.addEventListener('click', startScanner);
+stopScanBtn.addEventListener('click', stopScanner);
+clearDataBtn.addEventListener('click', clearData);
