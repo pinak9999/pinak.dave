@@ -1,5 +1,5 @@
 /* ===================================================================
-JAVASCRIPT LOGIC
+JAVASCRIPT LOGIC (CORRECTED & COMPLETE)
 =================================================================== */
 //---------------------------------------------------------
 // Blockchain and Smart Contracts Simulation
@@ -14,14 +14,12 @@ class Block {
 
     calculateHash() {
         const str = this.previousHash + this.timestamp + JSON.stringify(this.data);
-        // Using btoa for a simple, non-cryptographic hash simulation
         return btoa(unescape(encodeURIComponent(str))).substr(0, 32);
     }
 }
 
 class Blockchain {
     constructor() {
-        // Attempt to load from localStorage, otherwise create a new chain
         const savedData = localStorage.getItem('herbalChainData');
         if (savedData) {
             const parsedData = JSON.parse(savedData);
@@ -29,17 +27,16 @@ class Blockchain {
             this.metadata = parsedData.metadata;
             this.inventories = parsedData.inventories;
             this.reputationScores = parsedData.reputationScores || this.getInitialReputation();
-            this.qrScanLog = parsedData.qrScanLog || {}; // NEW: Load QR scan log
+            this.qrScanLog = parsedData.qrScanLog || {};
         } else {
             this.chain = [this.createGenesisBlock()];
             this.metadata = {}; 
             this.inventories = { 
                 'SUPPLIER-001': {},
                 'MANU-001': {},
-                
             };
             this.reputationScores = this.getInitialReputation();
-            this.qrScanLog = {}; // NEW: Initialize QR scan log
+            this.qrScanLog = {};
         }
     }
 
@@ -48,7 +45,6 @@ class Blockchain {
             'COLLECTOR-001': 100,
             'SUPPLIER-001': 100,
             'MANU-001': 100,
-            
         };
     }
     
@@ -68,29 +64,26 @@ class Blockchain {
 
     // Smart Contracts
     registerHerb(collectorID, herbID, name, location, quantity, unitType, quality) {
+        if ((this.reputationScores[collectorID] || 100) < 50) {
+            return { success: false, message: `Action Blocked: Your reputation score is below 50 and your account is suspended.` };
+        }
         if (this.metadata[herbID]) {
             return { success: false, message: 'This herb ID already exists.' };
         }
         const data = { 
-            type: 'registerHerb', 
-            collectorID, 
-            herbID, 
-            name, 
-            location, 
-            quantity: parseFloat(quantity), 
-            unitType, 
-            quality, 
-            timestamp: Date.now(),
-            status: 'pending_verification'
+            type: 'registerHerb', collectorID, herbID, name, location, 
+            quantity: parseFloat(quantity), unitType, quality, 
+            timestamp: Date.now(), status: 'pending_verification'
         };
         this.addBlock(new Block(data.timestamp, data));
-        
         this.metadata[herbID] = { name, location, quality, history: [data], status: 'pending_verification' };
-        
         return { success: true, message: `Herb ID ${herbID} recorded and is pending verification by supplier.` };
     }
 
     verifyHerbReceipt(supplierID, herbID, measuredQuantity) {
+        if ((this.reputationScores[supplierID] || 100) < 50) {
+            return { success: false, message: `Action Blocked: Your reputation score is below 50 and your account is suspended.` };
+        }
         const masterHerb = this.metadata[herbID];
         if (!masterHerb || masterHerb.status !== 'pending_verification') {
             return { success: false, message: 'This herb batch is not awaiting verification.' };
@@ -99,73 +92,60 @@ class Blockchain {
         const registrationBlockData = masterHerb.history[0];
         const claimedQuantity = registrationBlockData.quantity;
         const collectorID = registrationBlockData.collectorID;
-        const tolerance = claimedQuantity * 0.02; // 2% tolerance for natural weight loss
+        const tolerance = claimedQuantity * 0.02;
         const difference = Math.abs(claimedQuantity - measuredQuantity);
 
         if (difference > tolerance) {
-            // FRAUD ALERT
             masterHerb.status = 'disputed';
             registrationBlockData.status = 'disputed';
-            this.reputationScores[collectorID] = (this.reputationScores[collectorID] || 100) - 10; // Penalize
+            this.reputationScores[collectorID] = (this.reputationScores[collectorID] || 100) - 10;
+            this.reputationScores[supplierID] = (this.reputationScores[supplierID] || 100) + 5;
             const data = {
-                type: 'fraudAlert',
-                herbID,
-                claimedQuantity,
-                measuredQuantity,
-                timestamp: Date.now(),
+                type: 'fraudAlert', herbID, claimedQuantity, measuredQuantity, timestamp: Date.now(),
                 message: `Discrepancy found! Claimed: ${claimedQuantity}, Measured: ${measuredQuantity}.`
             };
             this.addBlock(new Block(data.timestamp, data));
             masterHerb.history.push(data);
-            return { success: false, message: `FRAUD ALERT: Weight discrepancy is too high for Herb ID ${herbID}. Batch is now disputed.` };
+            return { success: false, message: `FRAUD ALERT: Weight discrepancy found for ${herbID}. Collector penalized. You have been rewarded for flagging.` };
         } else {
-            // VERIFICATION SUCCESSFUL
             masterHerb.status = 'verified';
             registrationBlockData.status = 'verified';
-            this.reputationScores[collectorID] = (this.reputationScores[collectorID] || 100) + 1; // Reward
-            this.reputationScores[supplierID] = (this.reputationScores[supplierID] || 100) + 1; // Reward for verifying
-
+            this.reputationScores[collectorID] = (this.reputationScores[collectorID] || 100) + 2;
+            this.reputationScores[supplierID] = (this.reputationScores[supplierID] || 100) + 1;
             const data = {
-                type: 'verifyReceipt',
-                supplierID,
-                herbID,
-                verifiedQuantity: parseFloat(measuredQuantity),
-                timestamp: Date.now()
+                type: 'verifyReceipt', supplierID, herbID, verifiedQuantity: parseFloat(measuredQuantity), timestamp: Date.now()
             };
             this.addBlock(new Block(data.timestamp, data));
             masterHerb.history.push(data);
-            
             this.inventories[supplierID][herbID] = {
                 name: masterHerb.name,
                 quantity: parseFloat(measuredQuantity),
                 unitType: registrationBlockData.unitType
             };
-            return { success: true, message: `Batch ${herbID} verified successfully with quantity ${measuredQuantity}.` };
+            return { success: true, message: `Batch ${herbID} verified successfully.` };
         }
     }
 
     transferHerb(fromID, toID, herbID, weight, location, unitType, supplierQuality) {
+        if ((this.reputationScores[fromID] || 100) < 50) {
+            return { success: false, message: `Action Blocked: Your reputation score is below 50.` };
+        }
         const supplierInventory = this.inventories[fromID];
         const supplierHerb = supplierInventory ? supplierInventory[herbID] : undefined;
-
         if (!supplierHerb) {
             return { success: false, message: `Herb ID ${herbID} not found in supplier's verified inventory.` };
         }
-        
         const masterHerb = this.metadata[herbID];
         if (masterHerb.status !== 'verified') {
             return { success: false, message: `Cannot transfer a disputed or unverified batch.` };
         }
-
         if (supplierHerb.unitType !== unitType) {
             return { success: false, message: `Unit mismatch. Expected ${supplierHerb.unitType} but got ${unitType}.`};
         }
-
         const availableQuantity = supplierHerb.quantity;
         const transferWeight = parseFloat(weight);
-
         if (transferWeight > availableQuantity) {
-            return { success: false, message: `Insufficient units. Available: ${availableQuantity.toFixed(2)} ${supplierHerb.unitType}, Requested: ${transferWeight.toFixed(2)} ${unitType}.` };
+            return { success: false, message: `Insufficient units. Available: ${availableQuantity.toFixed(2)}, Requested: ${transferWeight.toFixed(2)}.` };
         }
         
         supplierHerb.quantity -= transferWeight;
@@ -175,6 +155,7 @@ class Blockchain {
             this.inventories[toID][herbID] = { name: masterHerb.name, quantity: 0, unitType: supplierHerb.unitType };
         }
         this.inventories[toID][herbID].quantity += transferWeight;
+        this.inventories[toID][herbID].status = 'pending_manufacturer_verification';
 
         const data = { type: 'transferHerb', fromID, toID, herbID, weight: transferWeight, unitType, location, supplierQuality, timestamp: Date.now() };
         this.addBlock(new Block(data.timestamp, data));
@@ -183,12 +164,49 @@ class Blockchain {
         return { success: true, message: `${transferWeight.toFixed(2)} ${unitType} of ${masterHerb.name} successfully transferred.` };
     }
     
+    verifySuppliedBatch(manufacturerID, herbID, qualityResult) {
+        if ((this.reputationScores[manufacturerID] || 100) < 50) {
+            return { success: false, message: `Action Blocked: Your reputation score is below 50.` };
+        }
+        const manuInventory = this.inventories[manufacturerID];
+        if (!manuInventory || !manuInventory[herbID] || manuInventory[herbID].status !== 'pending_manufacturer_verification') {
+             return { success: false, message: "Batch not awaiting your verification." };
+        }
+
+        const transferRecord = this.metadata[herbID].history.find(h => h.type === 'transferHerb' && h.toID === manufacturerID);
+        const supplierID = transferRecord ? transferRecord.fromID : null;
+
+        if (qualityResult.score < 60) {
+            manuInventory[herbID].status = 'disputed_by_manufacturer';
+            if (supplierID) {
+                this.reputationScores[supplierID] = (this.reputationScores[supplierID] || 100) - 15;
+            }
+            this.reputationScores[manufacturerID] = (this.reputationScores[manufacturerID] || 100) + 5;
+            const data = { type: 'qualityFraudAlert', manufacturerID, herbID, supplierID, qualityScore: qualityResult.score, timestamp: Date.now() };
+            this.addBlock(new Block(data.timestamp, data));
+            this.metadata[herbID].history.push(data);
+            return { success: false, message: `QUALITY FAILED for ${herbID}. Supplier penalized. You have been rewarded.` };
+        } else {
+            manuInventory[herbID].status = 'verified_by_manufacturer';
+            if (supplierID) {
+                this.reputationScores[supplierID] = (this.reputationScores[supplierID] || 100) + 3;
+            }
+            this.reputationScores[manufacturerID] = (this.reputationScores[manufacturerID] || 100) + 1;
+            const data = { type: 'verifySuppliedBatch', manufacturerID, herbID, qualityScore: qualityResult.score, timestamp: Date.now() };
+            this.addBlock(new Block(data.timestamp, data));
+            this.metadata[herbID].history.push(data);
+            return { success: true, message: `Batch ${herbID} quality verified successfully.` };
+        }
+    }
+
     useHerbInMedicine(batchID, manufacturerID, location, usedBatches, finalWeight, finalUnit, manufacturerQuality) {
-        const invalidHerbs = [];
+        if ((this.reputationScores[manufacturerID] || 100) < 50) {
+            return { success: false, message: `Action Blocked: Your reputation score is below 50.` };
+        }
         
-        if (manufacturerQuality.score < 60) {
+        if (!manufacturerQuality || manufacturerQuality.score < 60) {
             this.reputationScores[manufacturerID] = (this.reputationScores[manufacturerID] || 100) - 5;
-            return { success: false, message: `QUALITY BLOCKED! Manufacturer's final product score is too low: ${manufacturerQuality.score}/100. Production denied.` };
+            return { success: false, message: `QUALITY BLOCKED! Final product score is too low (${manufacturerQuality.score}/100). Production denied & reputation penalized.` };
         }
         
         const manufacturerInventory = this.inventories[manufacturerID];
@@ -196,17 +214,22 @@ class Blockchain {
             return { success: false, message: "Manufacturer not found."};
         }
 
+        const invalidHerbs = [];
         for (const batch of usedBatches) {
             const id = batch.herbID;
             const unitsUsed = parseFloat(batch.unitsUsed);
             const herbInManuInventory = manufacturerInventory[id];
 
-            if (!herbInManuInventory || herbInManuInventory.quantity < unitsUsed) {
-                invalidHerbs.push(`${id} (Available: ${herbInManuInventory ? herbInManuInventory.quantity.toFixed(2) : 0} ${herbInManuInventory.unitType})`);
+            if (!herbInManuInventory || herbInManuInventory.status !== 'verified_by_manufacturer') {
+                invalidHerbs.push(`${id.substring(5,12)}... (Not yet verified by you)`);
                 continue;
             }
-             if (herbInManuInventory.unitType !== batch.unitType) {
-                invalidHerbs.push(`${id} (Unit Mismatch: Expected ${herbInManuInventory.unitType})`);
+            if (herbInManuInventory.quantity < unitsUsed) {
+                invalidHerbs.push(`${id.substring(5,12)}... (Available: ${herbInManuInventory.quantity.toFixed(2)})`);
+                continue;
+            }
+            if (herbInManuInventory.unitType !== batch.unitType) {
+                invalidHerbs.push(`${id.substring(5,12)}... (Unit Mismatch: Expected ${herbInManuInventory.unitType})`);
                 continue;
             }
         }
@@ -240,7 +263,7 @@ function saveData() {
         metadata: herbChain.metadata,
         inventories: herbChain.inventories,
         reputationScores: herbChain.reputationScores,
-        qrScanLog: herbChain.qrScanLog // Save the QR scan log
+        qrScanLog: herbChain.qrScanLog
     };
     localStorage.setItem('herbalChainData', JSON.stringify(dataToSave));
 }
@@ -255,19 +278,14 @@ function clearData() {
 //---------------------------------------------------------
 // DOM ELEMENTS AND EVENT LISTENERS
 //---------------------------------------------------------
-let herbChain = new Blockchain(); // Initialize blockchain (loads from storage if available)
+let herbChain = new Blockchain();
 
-// Global DOM Elements
 const tabs = document.querySelectorAll('.tab-button');
 const tabContents = document.querySelectorAll('.tab-content');
 const ledgerBody = document.getElementById('ledger-body');
 const downloadPdfBtn = document.getElementById('download-pdf-btn');
 const clearDataBtn = document.getElementById('clear-data-btn');
-
-// Collector elements
 const addHerbBtn = document.getElementById('add-herb-btn');
-
-// Supplier elements
 const verifyHerbSelect = document.getElementById('verify-herb-id');
 const measuredQuantityInput = document.getElementById('measured-quantity');
 const measuredUnitSelect = document.getElementById('measured-unit-select');
@@ -275,8 +293,6 @@ const verifyReceiptBtn = document.getElementById('verify-receipt-btn');
 const transferHerbSelect = document.getElementById('transfer-herb-id');
 const availableUnitsSupplierSpan = document.getElementById('available-units-supplier');
 const transferHerbBtn = document.getElementById('transfer-herb-btn');
-
-// Manufacturer elements
 const produceMedicineBtn = document.getElementById('produce-medicine-btn');
 const multiBatchInputsContainer = document.getElementById('multi-batch-inputs');
 const addBatchBtn = document.getElementById('add-batch-btn');
@@ -284,8 +300,6 @@ const qrcodeDiv = document.getElementById('qrcode');
 const qrTitle = document.getElementById('qr-title');
 const generatedQrCount = document.getElementById('generated-qr-count');
 const MAX_BATCHES = 5;
-
-// Consumer tab elements
 const qrImageInput = document.getElementById('qr-image-input');
 const traceResultDiv = document.getElementById('trace-result');
 const traceContent = document.getElementById('trace-content');
@@ -297,6 +311,7 @@ let collectorQualityData = null;
 let supplierQualityData = null;
 let manufacturerQualityData = null;
 let collectorStream, supplierStream, manufacturerStream = null;
+let currentBatchToVerify = null;
 
 //---------------------------------------------------------
 // UI Update Functions
@@ -309,16 +324,19 @@ function updateAllUI() {
     saveData();
 }
 
-/**
- * Updates the reputation score display on the UI.
- */
+function getReputationTier(score) {
+    if (score >= 95) return { name: 'Excellent', class: 'excellent' };
+    if (score >= 80) return { name: 'Good', class: 'good' };
+    if (score >= 70) return { name: 'Average', class: 'average' };
+    if (score >= 50) return { name: 'Watchlist ⚠️', class: 'watchlist' };
+    return { name: 'Suspended ❌', class: 'suspended' };
+}
+
 function updateReputationScores() {
     const scoresContainer = document.getElementById('reputation-scores');
-    scoresContainer.innerHTML = ''; // Clear existing scores
-
+    scoresContainer.innerHTML = '';
     if (!herbChain.reputationScores) return;
 
-    // A mapping for better display names
     const manuOptions = document.getElementById('transfer-to').options;
     const participantNames = {
         'COLLECTOR-001': 'Collector',
@@ -328,27 +346,20 @@ function updateReputationScores() {
         participantNames[manuOptions[i].value] = manuOptions[i].textContent;
     }
 
-
     Object.entries(herbChain.reputationScores).forEach(([id, score]) => {
         const card = document.createElement('div');
         card.className = 'reputation-card';
-
-        const displayName = participantNames[id] || id;
-
-        let scoreClass = '';
-        if (score < 90) scoreClass = 'low-score';
-
+        const tier = getReputationTier(score);
         card.innerHTML = `
-            <span class="participant-name">${displayName}</span>
-            <span class="participant-score ${scoreClass}">${score}</span>
+            <span class="participant-name">${participantNames[id] || id}</span>
+            <span class="participant-score ${tier.class}">${score}</span>
+            <span class="participant-tier ${tier.class}">${tier.name}</span>
         `;
         scoresContainer.appendChild(card);
     });
 }
 
-
 function updateSupplierForm() {
-    // Populate the UNVERIFIED batches dropdown
     const unverifiedBatches = Object.entries(herbChain.metadata)
         .filter(([id, data]) => data.status === 'pending_verification');
     
@@ -364,7 +375,6 @@ function updateSupplierForm() {
         });
     }
 
-    // Populate the VERIFIED batches dropdown for transfer
     const supplierInventory = herbChain.inventories['SUPPLIER-001'];
     const availableHerbs = Object.entries(supplierInventory)
         .filter(([id, data]) => data.quantity > 0 && herbChain.metadata[id].status === 'verified');
@@ -378,7 +388,6 @@ function updateSupplierForm() {
             transferHerbSelect.appendChild(option);
         });
     }
-    
     availableUnitsSupplierSpan.textContent = '';
 }
 
@@ -386,25 +395,18 @@ function updateManufacturerForm() {
     const manufacturerInventory = herbChain.inventories['MANU-001'] || {};
     const transferredHerbs = Object.entries(manufacturerInventory).filter(([id, data]) => data.quantity > 0);
 
-    if (transferredHerbs.length === 0) {
+    if (transferredHerbs.length === 0 && multiBatchInputsContainer.children.length === 0) {
         multiBatchInputsContainer.innerHTML = '<p>No transferred herbs in inventory to use.</p>';
-    } else if (multiBatchInputsContainer.querySelectorAll('.batch-input-group').length === 0) {
-         multiBatchInputsContainer.innerHTML = '';
+    } else if (transferredHerbs.length > 0 && multiBatchInputsContainer.querySelector('p')) {
+        multiBatchInputsContainer.innerHTML = '';
     }
-
+    
     const canAddMore = multiBatchInputsContainer.querySelectorAll('.batch-input-group').length < MAX_BATCHES;
 
-    if (transferredHerbs.length > 0 && canAddMore) {
-        addBatchBtn.style.display = 'block';
-        addBatchBtn.textContent = 'Add Herb Batch';
-        addBatchBtn.disabled = false;
-        addBatchBtn.classList.remove('disabled');
-    } else {
-        addBatchBtn.style.display = 'block';
-        addBatchBtn.textContent = canAddMore ? 'No Batches Available' : `Maximum ${MAX_BATCHES} Batches`;
-        addBatchBtn.disabled = true;
-        addBatchBtn.classList.add('disabled');
-    }
+    addBatchBtn.style.display = 'block';
+    addBatchBtn.disabled = !(transferredHerbs.length > 0 && canAddMore);
+    addBatchBtn.classList.toggle('disabled', addBatchBtn.disabled);
+    addBatchBtn.textContent = canAddMore ? (transferredHerbs.length > 0 ? 'Add Herb Batch' : 'No Batches Available') : `Maximum ${MAX_BATCHES} Batches`;
 }
 
 function updateLedger() {
@@ -418,15 +420,13 @@ function updateLedger() {
         let fraudAlertStatus = '✅ N/A';
         let qualityMatchStatus = 'N/A';
         
-        if (data.type === 'fraudAlert') {
-            fraudAlertStatus = `🚨 DISPUTED! Claim: ${data.claimedQuantity}, Measured: ${data.measuredQuantity}`;
+        if (data.type === 'fraudAlert' || data.type === 'qualityFraudAlert') {
+            fraudAlertStatus = `🚨 DISPUTED`;
         }
         
-        if (data.type === 'transferHerb' && data.supplierQuality) {
-            qualityMatchStatus = data.supplierQuality.score >= 70 ? '✅ Passed (>=70)' : `🚨 Failed (<70)`;
-        } else if (data.type === 'useHerb' && data.manufacturerQuality) {
-            qualityMatchStatus = data.manufacturerQuality.score >= 60 ? '✅ Passed (>=60)' : `🚨 Failed (<60)`;
-        }
+        if (data.supplierQuality) qualityMatchStatus = data.supplierQuality.score >= 70 ? `✅ S: ${data.supplierQuality.score}` : `🚨 S: ${data.supplierQuality.score}`;
+        else if (data.manufacturerQuality) qualityMatchStatus = data.manufacturerQuality.score >= 60 ? `✅ M: ${data.manufacturerQuality.score}` : `🚨 M: ${data.manufacturerQuality.score}`;
+        else if (data.qualityScore) qualityMatchStatus = data.qualityScore >= 60 ? `✅ V: ${data.qualityScore}` : `🚨 V: ${data.qualityScore}`;
 
         let formattedData = '';
         Object.entries(data).forEach(([key, value]) => {
@@ -443,7 +443,6 @@ function updateLedger() {
              formattedData += `<strong>${key}:</strong><br>${displayValue}<br><br>`;
         });
 
-
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${herbChain.chain.length - 1 - index}</td>
@@ -458,7 +457,7 @@ function updateLedger() {
             <td>${fraudAlertStatus}</td>
             <td>${qualityMatchStatus}</td>
         `;
-        if (data.type === 'fraudAlert') {
+        if (fraudAlertStatus.startsWith('🚨')) {
             row.style.backgroundColor = 'var(--error-light)';
             row.style.color = 'var(--error-dark)';
         }
@@ -467,24 +466,17 @@ function updateLedger() {
 }
 
 //---------------------------------------------------------
-// Page Initialization
+// Page Initialization & Tab Switching
 //---------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
-    // Set initial tab
     document.querySelector('.tab-button[data-tab="collector"]').click();
-
-    // Set theme
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         document.documentElement.classList.add('dark-mode');
     }
-    
-    updateAllUI(); // Initial UI update from potentially loaded data
+    updateAllUI();
 });
 
-//---------------------------------------------------------
-// Tab Switching
-//---------------------------------------------------------
 tabs.forEach(button => {
     button.addEventListener('click', () => {
         const tab = button.dataset.tab;
@@ -492,12 +484,8 @@ tabs.forEach(button => {
         button.classList.add('active');
         tabContents.forEach(content => content.classList.remove('active'));
         document.getElementById(tab).classList.add('active');
-        
         stopAllCameras();
-        
-        // Clear status messages when switching tabs
         document.querySelectorAll('.status-message').forEach(el => el.innerHTML = '');
-
         if(tab === 'supplier') updateSupplierForm();
         if(tab === 'manufacturer') updateManufacturerForm();
     });
@@ -506,8 +494,6 @@ tabs.forEach(button => {
 //---------------------------------------------------------
 // Event Listeners for Forms and Buttons
 //---------------------------------------------------------
-
-// Collector Form
 addHerbBtn.addEventListener('click', () => {
     const name = document.getElementById('collector-herb-name').value;
     const location = document.getElementById('collector-location').value;
@@ -520,31 +506,24 @@ addHerbBtn.addEventListener('click', () => {
         statusDiv.className = 'status-message error';
         return;
     }
-
     if (!collectorQualityData || collectorQualityData.score < 50) {
         statusDiv.textContent = 'AI Quality Check must be run and must pass (Score >= 50).';
         statusDiv.className = 'status-message error';
         return;
     }
-
-    const herbID = 'HERB-' + Date.now();
-    const result = herbChain.registerHerb('COLLECTOR-001', herbID, name, location, quantity, unitType, collectorQualityData);
+    const result = herbChain.registerHerb('COLLECTOR-001', 'HERB-' + Date.now(), name, location, quantity, unitType, collectorQualityData);
+    statusDiv.textContent = result.message;
+    statusDiv.className = `status-message ${result.success ? 'success' : 'error'}`;
     if (result.success) {
-        statusDiv.textContent = result.message;
-        statusDiv.className = 'status-message success';
         document.getElementById('collector-herb-name').value = '';
         document.getElementById('collector-location').value = '';
         document.getElementById('collector-quantity').value = '';
         document.getElementById('collector-quality-result').textContent = '';
         collectorQualityData = null;
-        updateAllUI();
-    } else {
-        statusDiv.textContent = result.message;
-        statusDiv.className = 'status-message error';
     }
+    updateAllUI();
 });
 
-// Supplier Verification Form
 verifyReceiptBtn.addEventListener('click', () => {
     const herbID = verifyHerbSelect.value;
     const measuredQuantity = measuredQuantityInput.value;
@@ -555,16 +534,12 @@ verifyReceiptBtn.addEventListener('click', () => {
         statusDiv.className = 'status-message error';
         return;
     }
-    
     const result = herbChain.verifyHerbReceipt('SUPPLIER-001', herbID, parseFloat(measuredQuantity));
-    
     statusDiv.textContent = result.message;
     statusDiv.className = `status-message ${result.success ? 'success' : 'error'}`;
-    
     updateAllUI();
 });
 
-// Supplier Transfer Form
 transferHerbBtn.addEventListener('click', () => {
     const herbID = document.getElementById('transfer-herb-id').value;
     const toID = document.getElementById('transfer-to').value;
@@ -578,18 +553,14 @@ transferHerbBtn.addEventListener('click', () => {
         statusDiv.className = 'status-message error';
         return;
     }
-
     if (!supplierQualityData || supplierQualityData.score < 70) {
         statusDiv.textContent = 'AI Quality Check must be run and must pass (Score >= 70).';
         statusDiv.className = 'status-message error';
         return;
     }
-
     const result = herbChain.transferHerb('SUPPLIER-001', toID, herbID, weight, location, unitType, supplierQualityData);
-    
     statusDiv.textContent = result.message;
     statusDiv.className = `status-message ${result.success ? 'success' : 'error'}`;
-    
     if (result.success) {
         document.getElementById('transfer-herb-id').value = '';
         document.getElementById('transfer-to').value = '';
@@ -602,26 +573,22 @@ transferHerbBtn.addEventListener('click', () => {
     updateAllUI();
 });
 
-// Manufacturer Form: Add Batch Button
 addBatchBtn.addEventListener('click', () => {
     const currentBatches = multiBatchInputsContainer.querySelectorAll('.batch-input-group').length;
     if (currentBatches >= MAX_BATCHES) return;
 
-    const availableHerbs = Object.entries(herbChain.inventories['MANU-001'])
+    const availableHerbs = Object.entries(herbChain.inventories['MANU-001'] || {})
         .filter(([id, data]) => data.quantity > 0);
 
     if (availableHerbs.length === 0) {
-        alert('No transferred herbs with available quantity to add.');
+        alert('No available herb batches to add.');
         return;
     }
-    
-    if (multiBatchInputsContainer.querySelector('p')) {
-        multiBatchInputsContainer.innerHTML = '';
-    }
+    if (multiBatchInputsContainer.querySelector('p')) multiBatchInputsContainer.innerHTML = '';
 
     const newBatchInputGroup = document.createElement('div');
     newBatchInputGroup.className = 'batch-input-group';
-
+    const uniqueId = `batch-status-${Date.now()}`;
     newBatchInputGroup.innerHTML = `
         <div>
             <label>Herb Batch:</label>
@@ -629,13 +596,15 @@ addBatchBtn.addEventListener('click', () => {
             <span class="available-units-label"></span>
             <button type="button" class="remove-batch-btn">&times;</button>
         </div>
+        <div class="batch-verification-area">
+            <span class="batch-verification-status" id="${uniqueId}">Status: Not Verified ❗</span>
+            <button type="button" class="btn btn-small verify-batch-quality-btn">Verify Batch Quality</button>
+        </div>
         <div>
-            <label>Units Used:</label>
+            <label>Units To Use:</label>
             <div class="unit-input-group">
-                <input type="number" class="units-used-input" placeholder="0" required>
-                <select class="units-used-select" disabled>
-                    <option value="Kg">Kg</option><option value="Gram">Gram</option><option value="Pieces">Pieces</option><option value="Bundles">Bundles</option>
-                </select>
+                <input type="number" class="units-used-input" placeholder="0" required disabled>
+                <select class="units-used-select" disabled></select>
             </div>
         </div>
     `;
@@ -645,21 +614,58 @@ addBatchBtn.addEventListener('click', () => {
     availableHerbs.forEach(([id, data]) => {
         const option = document.createElement('option');
         option.value = id;
-        option.textContent = `${data.name} (ID: ${id.substring(5, 12)}... - ${data.quantity.toFixed(2)} ${data.unitType})`;
+        option.textContent = `${data.name} (ID: ${id.substring(5, 12)}... )`;
         selectElement.appendChild(option);
     });
 
     selectElement.addEventListener('change', (e) => {
-        const selectedHerbId = e.target.value;
-        const availableUnitsLabel = newBatchInputGroup.querySelector('.available-units-label');
+        const herbID = e.target.value;
+        const statusSpan = newBatchInputGroup.querySelector('.batch-verification-status');
+        const unitInput = newBatchInputGroup.querySelector('.units-used-input');
         const unitSelect = newBatchInputGroup.querySelector('.units-used-select');
-        if (selectedHerbId) {
-            const herbData = herbChain.inventories['MANU-001'][selectedHerbId];
-            availableUnitsLabel.textContent = `(Max: ${herbData.quantity.toFixed(2)})`;
-            unitSelect.value = herbData.unitType;
+        const availableLabel = newBatchInputGroup.querySelector('.available-units-label');
+        const verifyBtn = newBatchInputGroup.querySelector('.verify-batch-quality-btn');
+        
+        if (herbID) {
+            const herbData = herbChain.inventories['MANU-001'][herbID];
+            unitSelect.innerHTML = `<option value="${herbData.unitType}">${herbData.unitType}</option>`;
+            availableLabel.textContent = `(Avail: ${herbData.quantity.toFixed(2)})`;
+            
+            if (herbData.status === 'verified_by_manufacturer') {
+                statusSpan.textContent = 'Status: Verified ✔';
+                statusSpan.className = 'batch-verification-status verified';
+                unitInput.disabled = false;
+                verifyBtn.disabled = true;
+                verifyBtn.classList.add('disabled');
+            } else if (herbData.status === 'disputed_by_manufacturer') {
+                statusSpan.textContent = 'Status: Disputed ❌';
+                statusSpan.className = 'batch-verification-status failed';
+                unitInput.disabled = true;
+                verifyBtn.disabled = true;
+                verifyBtn.classList.add('disabled');
+            } else { // pending_manufacturer_verification
+                statusSpan.textContent = 'Status: Not Verified ❗';
+                statusSpan.className = 'batch-verification-status';
+                unitInput.disabled = true;
+                verifyBtn.disabled = false;
+                verifyBtn.classList.remove('disabled');
+            }
         } else {
-            availableUnitsLabel.textContent = '';
+            statusSpan.textContent = 'Status: Not Verified ❗';
+            unitInput.disabled = true;
+            availableLabel.textContent = '';
         }
+    });
+
+    newBatchInputGroup.querySelector('.verify-batch-quality-btn').addEventListener('click', () => {
+        const herbID = selectElement.value;
+        if (!herbID) {
+            alert('Please select a herb batch first.');
+            return;
+        }
+        currentBatchToVerify = { id: herbID, statusElementId: uniqueId };
+        alert('Starting camera to verify SUPPLIED batch quality. Please frame the herb sample.');
+        startCamera('manufacturer');
     });
 
     newBatchInputGroup.querySelector('.remove-batch-btn').addEventListener('click', () => {
@@ -671,7 +677,6 @@ addBatchBtn.addEventListener('click', () => {
     updateManufacturerForm();
 });
 
-// Manufacturer Form: Produce Medicine Button
 produceMedicineBtn.addEventListener('click', () => {
     const batchID = document.getElementById('batch-id').value;
     const location = document.getElementById('manufacturer-location').value;
@@ -691,13 +696,13 @@ produceMedicineBtn.addEventListener('click', () => {
     });
 
     if (!batchID || !location || isNaN(finalWeight) || finalWeight <= 0 || !isValid || usedBatches.length === 0) {
-        statusDiv.textContent = 'Please fill all fields, add at least one valid herb batch, and ensure all values are positive.';
+        statusDiv.textContent = 'Please fill all fields, add at least one valid & verified herb batch, and ensure all values are positive.';
         statusDiv.className = 'status-message error';
         return;
     }
 
-    if (!manufacturerQualityData || manufacturerQualityData.score < 60) {
-        statusDiv.textContent = 'Final Product AI Quality Check must be run and must pass (Score >= 60).';
+    if (!manufacturerQualityData) {
+        statusDiv.textContent = 'Final Product AI Quality Check must be run first.';
         statusDiv.className = 'status-message error';
         return;
     }
@@ -721,15 +726,12 @@ produceMedicineBtn.addEventListener('click', () => {
             
             const qrContainer = document.createElement('div');
             qrContainer.className = 'qr-code-item';
-
             const qrElement = document.createElement('div');
             new QRCode(qrElement, { text: qrData, width: 128, height: 128 });
             qrContainer.appendChild(qrElement);
-
             const qrLabel = document.createElement('p');
             qrLabel.textContent = `Unit ${i}`;
             qrContainer.appendChild(qrLabel);
-            
             const downloadBtn = document.createElement('button');
             downloadBtn.textContent = 'Download';
             downloadBtn.className = 'btn download-qr-btn';
@@ -758,11 +760,10 @@ produceMedicineBtn.addEventListener('click', () => {
         statusDiv.textContent = result.message;
         statusDiv.className = 'status-message error';
         generatedQrCount.textContent = '';
+        updateAllUI(); 
     }
 });
 
-
-// Supplier Form Dropdown Listeners
 verifyHerbSelect.addEventListener('change', (e) => {
     const selectedHerbId = e.target.value;
     if (selectedHerbId && herbChain.metadata[selectedHerbId]) {
@@ -782,15 +783,14 @@ transferHerbSelect.addEventListener('change', (e) => {
     }
 });
 
-
 //---------------------------------------------------------
-// Helper/Utility Functions (Camera, Geolocation, etc.)
+// Helper/Utility Functions
 //---------------------------------------------------------
 function stopAllCameras() {
     stopCamera('collector');
     stopCamera('supplier');
     stopCamera('manufacturer');
-    if (html5QrcodeScanner && html5QrcodeScanner.getState() === 2) { // 2 is SCANNING state
+    if (html5QrcodeScanner && html5QrcodeScanner.getState() === 2) {
         stopScanner();
     }
 }
@@ -819,7 +819,6 @@ function startCamera(role) {
             .catch(function(err) {
                 statusDiv.textContent = `Camera access denied: ${err.name}`;
                 statusDiv.className = 'status-message error';
-                console.error("Camera access error: ", err);
             });
     } else {
         statusDiv.textContent = 'Camera not supported by your browser.';
@@ -859,29 +858,46 @@ function takeSnapshotAndCheck(role) {
     statusDiv.textContent = 'Analyzing snapshot...';
     statusDiv.className = 'status-message warning';
 
-    setTimeout(() => { // Simulate AI processing
+    setTimeout(() => {
         const qualityScore = Array.from(imageData).reduce((acc, val) => acc + val, 0) % 51 + 50;
-        let qualityStatus, statusClass;
-        let qualityData = { score: qualityScore };
+        const qualityData = { score: qualityScore };
+        const thresholds = { collector: 50, supplier: 70, manufacturer: 60 };
 
-        let thresholds = { collector: 50, supplier: 70, manufacturer: 60 };
-        let threshold = thresholds[role];
-
-        if (qualityScore < threshold) {
-            qualityStatus = `Check Failed! Score is below the required ${threshold}.`;
-            statusClass = "error";
+        if (role === 'manufacturer' && currentBatchToVerify) {
+            const result = herbChain.verifySuppliedBatch('MANU-001', currentBatchToVerify.id, qualityData);
+            const batchStatusEl = document.getElementById(currentBatchToVerify.statusElementId);
+            const unitInput = batchStatusEl.closest('.batch-input-group').querySelector('.units-used-input');
+            const verifyBtn = batchStatusEl.closest('.batch-input-group').querySelector('.verify-batch-quality-btn');
+            
+            if (result.success) {
+                batchStatusEl.textContent = 'Status: Verified ✔';
+                batchStatusEl.className = 'batch-verification-status verified';
+                unitInput.disabled = false;
+                verifyBtn.disabled = true;
+                verifyBtn.classList.add('disabled');
+            } else {
+                batchStatusEl.textContent = 'Status: Disputed ❌';
+                batchStatusEl.className = 'batch-verification-status failed';
+                unitInput.disabled = true;
+                verifyBtn.disabled = true;
+                verifyBtn.classList.add('disabled');
+            }
+            alert(result.message);
+            stopCamera('manufacturer');
+            currentBatchToVerify = null;
+            updateAllUI();
         } else {
-            qualityStatus = "Passed";
-            statusClass = "success";
+            let statusText = "Passed";
+            if (qualityScore < thresholds[role]) {
+                statusText = `Check Failed! Score is below ${thresholds[role]}.`;
+            }
+            qualityData.status = statusText;
+            statusDiv.textContent = `AI analysis complete! Quality Score: ${qualityScore}/100. Status: ${statusText}`;
+            statusDiv.className = `status-message ${qualityScore < thresholds[role] ? 'error' : 'success'}`;
+            if(role === 'collector') collectorQualityData = qualityData;
+            if(role === 'supplier') supplierQualityData = qualityData;
+            if(role === 'manufacturer') manufacturerQualityData = qualityData;
         }
-
-        qualityData.status = qualityStatus;
-        if(role === 'collector') collectorQualityData = qualityData;
-        if(role === 'supplier') supplierQualityData = qualityData;
-        if(role === 'manufacturer') manufacturerQualityData = qualityData;
-
-        statusDiv.textContent = `AI analysis complete! Quality Score: ${qualityScore}/100. Status: ${qualityStatus}`;
-        statusDiv.className = `status-message ${statusClass}`;
     }, 1000);
 }
 
@@ -909,7 +925,6 @@ function getGeoLocation(role) {
     }
 }
 
-// All location capture button listeners
 ['collector', 'supplier', 'manufacturer'].forEach(role => {
     document.getElementById(`capture-${role}-location-btn`).addEventListener('click', () => getGeoLocation(role));
     document.getElementById(`start-${role}-camera-btn`).addEventListener('click', () => startCamera(role));
@@ -917,12 +932,11 @@ function getGeoLocation(role) {
     document.getElementById(`stop-${role}-camera-btn`).addEventListener('click', () => stopCamera(role));
 });
 
-// --- Consumer Tab Logic ---
 function onScanSuccess(decodedText) {
     stopScanner();
     processQrData(decodedText);
 }
-function onScanError(errorMessage) { /* Quietly handle errors */ }
+function onScanError(errorMessage) {}
 
 function startScanner() {
     if (!html5QrcodeScanner || html5QrcodeScanner.getState() !== 2) {
@@ -944,14 +958,12 @@ function stopScanner() {
 function handleQrImageUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
-    
     const html5QrCode = new Html5Qrcode("file-scanner-container", { verbose: false });
     traceResultDiv.classList.remove('hidden');
     traceContent.innerHTML = '<p class="status-message warning">Scanning image...</p>';
-
     html5QrCode.scanFile(file, true)
         .then(decodedText => processQrData(decodedText))
-        .catch(err => traceContent.innerHTML = `<p class="status-message error">Error scanning image: ${err}. Please try a clearer QR code image.</p>`)
+        .catch(err => traceContent.innerHTML = `<p class="status-message error">Error scanning image: ${err}.</p>`)
         .finally(() => { qrImageInput.value = ''; });
 }
 
@@ -961,20 +973,17 @@ function processQrData(qrDataString) {
     try {
         qrData = JSON.parse(qrDataString);
     } catch (e) {
-        traceContent.innerHTML = `<p class="status-message error">Invalid QR Code Data. Not in the correct JSON format.</p>`;
+        traceContent.innerHTML = `<p class="status-message error">Invalid QR Code Data.</p>`;
         return;
     }
-
-    // NEW: One-Time Scan Logic
     if (qrData.unitID) {
         if (herbChain.qrScanLog[qrData.unitID]) {
             const firstScanTime = new Date(herbChain.qrScanLog[qrData.unitID].firstScanTimestamp).toLocaleString();
             traceContent.innerHTML = `
                 <div class="qr-scan-warning">
                     <strong>⚠️ Warning: QR Code Already Scanned!</strong>
-                    <p>This product's unique QR code was first scanned on:</p>
-                    <p><strong>${firstScanTime}</strong></p>
-                    <p>If you are not the first person to scan this, the product may be counterfeit. Please contact the manufacturer.</p>
+                    <p>This QR code was first scanned on: <strong>${firstScanTime}</strong></p>
+                    <p>This product may be counterfeit.</p>
                 </div>`;
             return;
         } else {
@@ -1001,8 +1010,8 @@ function processQrData(qrDataString) {
                             <p><strong>Herb ID:</strong> ${herbId}</p><hr>`;
                 herbMaster.history.forEach(rec => {
                     html += `<p><strong>Action:</strong> ${rec.type}<br>
-                                 <strong>Timestamp:</strong> ${new Date(rec.timestamp).toLocaleString()}<br>
-                                 <strong>Location:</strong> ${rec.location || 'N/A'}</p>`;
+                                <strong>Timestamp:</strong> ${new Date(rec.timestamp).toLocaleString()}<br>
+                                <strong>Location:</strong> ${rec.location || 'N/A'}</p>`;
                 });
                 html += `</div>`;
             }
@@ -1013,7 +1022,6 @@ function processQrData(qrDataString) {
     }
 }
 
-// --- Final Event Listeners for miscellaneous buttons ---
 downloadPdfBtn.addEventListener('click', () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
@@ -1032,7 +1040,7 @@ downloadPdfBtn.addEventListener('click', () => {
             block.hash.substring(0, 10) + '...',
             formattedData,
             fraudAlertStatus,
-            'N/A' // Quality match placeholder for PDF
+            'N/A'
         ];
     });
 
